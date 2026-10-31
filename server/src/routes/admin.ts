@@ -17,6 +17,7 @@ import { badRequest } from "../lib/errors.js";
 import { probe } from "../lib/http.js";
 import { sendTestNotification } from "../lib/notify.js";
 import { getSettings, updateSettings } from "../lib/settings.js";
+import { checkForUpdate } from "../lib/updateCheck.js";
 import { parse } from "../lib/validate.js";
 import { hostDisk } from "../servers/disk.js";
 import { listAllServers } from "../servers/repo.js";
@@ -163,7 +164,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   // ---------------------------------------------------------- settings
   app.get("/api/admin/settings", { preHandler: requireAdmin }, async () => {
     const s = getSettings();
-    return { settings: { ...s, telegramBotToken: s.telegramBotToken ? "••••••" : "", curseforgeApiKey: s.curseforgeApiKey ? "••••••" : "" } };
+    return {
+      settings: {
+        ...s,
+        telegramBotToken: s.telegramBotToken ? "••••••" : "",
+        telegramRelayKey: s.telegramRelayKey ? "••••••" : "",
+        curseforgeApiKey: s.curseforgeApiKey ? "••••••" : "",
+      },
+    };
   });
 
   app.put("/api/admin/settings", { preHandler: requireAdmin }, async (req) => {
@@ -174,7 +182,20 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         panelName: z.string().trim().min(1).max(40).optional(),
         telegramBotToken: z.string().max(100).regex(/^$|^\d+:[\w-]+$|^••••••$/, "Неверный формат токена").optional(),
         telegramChatId: z.string().max(40).regex(/^$|^-?\d+$|^@\w+$/, "Неверный chat id").optional(),
+        telegramApiBase: z.string().trim().max(200).regex(/^$|^https:\/\/[^\s]+$/, "Адрес должен начинаться с https://").optional(),
+        telegramRelayKey: z.string().trim().max(100).regex(/^[^\s]*$|^••••••$/, "Ключ не должен содержать пробелов").optional(),
         discordWebhook: z.string().max(300).regex(/^$|^https:\/\/(discord|discordapp)\.com\/api\/webhooks\//, "Это не webhook Discord").optional(),
+        notifyEvents: z
+          .object({
+            started: z.boolean(),
+            stopped: z.boolean(),
+            crash: z.boolean(),
+            backupOk: z.boolean(),
+            backupFailed: z.boolean(),
+            disk: z.boolean(),
+          })
+          .partial()
+          .optional(),
         diskAlertPercent: z.number().int().min(50).max(99).optional(),
         curseforgeApiKey: z.string().trim().max(200).regex(/^[^\s]*$|^••••••$/, "Ключ не должен содержать пробелов").optional(),
       }),
@@ -182,6 +203,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     );
     // The masked placeholder means "keep the stored token".
     if (body.telegramBotToken === "••••••") delete body.telegramBotToken;
+    if (body.telegramRelayKey === "••••••") delete body.telegramRelayKey;
     if (body.curseforgeApiKey === "••••••") delete body.curseforgeApiKey;
     updateSettings(body);
     audit({ userId: currentUser(req).id, action: "admin.settings", details: Object.keys(body), ip: req.ip });
@@ -212,6 +234,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     await writeFile(join(config.DATA_DIR, "update-requested"), new Date().toISOString());
     audit({ userId: currentUser(req).id, action: "admin.update_requested", ip: req.ip });
     return { ok: true };
+  });
+
+  app.get("/api/admin/update/check", { preHandler: requireAdmin }, async () => {
+    const current = await readFile(join(process.cwd(), "VERSION"), "utf8").then((v) => v.split("\n")[0]?.trim() ?? "", () => "");
+    return checkForUpdate(current);
   });
 
   app.get("/api/admin/update/status", { preHandler: requireAdmin }, async () => {

@@ -1,14 +1,18 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   Boxes,
   ChevronRight,
+  Download,
   Gauge,
   Globe,
+  LifeBuoy,
   LogOut,
   Menu,
   Moon,
   Plus,
   ScrollText,
+  Send,
   Settings,
   Sun,
   User as UserIcon,
@@ -18,7 +22,8 @@ import {
 } from "lucide-react";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { CreeperIcon } from "@/components/CreeperIcon";
+import { CHANNEL_URL } from "@/components/ChannelPrompt";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,6 +36,7 @@ import {
 import { useAuth } from "@/hooks/auth";
 import { useConnected, useLiveSync, useServers } from "@/hooks/servers";
 import { useTheme } from "@/hooks/useTheme";
+import { get } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import type { ServerStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -84,9 +90,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col gap-6 overflow-y-auto p-4 scrollbar-thin">
       <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-2 pt-1">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <CreeperIcon className="size-5" />
-        </div>
+        <Logo className="size-8 drop-shadow-sm" />
         <span className="text-[15px] font-semibold tracking-tight">{settings?.panelName ?? "MC Panel"}</span>
       </Link>
 
@@ -128,6 +132,85 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <NavItem to="/admin/settings" icon={<Settings />} label={t("nav.adminSettings")} onClick={onNavigate} />
         </div>
       )}
+
+      <div className="mt-auto space-y-1 border-t pt-4">
+        <ExternalLink href={BOT_URL} icon={<LifeBuoy />} label={t("nav.help")} hint={t("nav.helpHint")} />
+        <ExternalLink href={CHANNEL_URL} icon={<Send />} label={t("nav.channel")} hint={t("nav.channelHint")} />
+      </div>
+    </div>
+  );
+}
+
+const BOT_URL = "https://t.me/faqmcpanel_bot";
+
+function ExternalLink({ href, icon, label, hint }: { href: string; icon: ReactNode; label: string; hint: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+    >
+      {icon}
+      <span className="min-w-0">
+        <span className="block truncate font-medium text-foreground">{label}</span>
+        <span className="block truncate text-xs">{hint}</span>
+      </span>
+    </a>
+  );
+}
+
+interface UpdateInfo {
+  available: boolean;
+  behindBy: number;
+  latest: string;
+  message: string;
+}
+
+const DISMISSED_KEY = "mcp-update-dismissed";
+
+/** Admin-only strip under the header when the published branch is ahead of the installed version. */
+function UpdateBanner() {
+  const { t } = useI18n();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const check = useQuery({
+    queryKey: ["update-check"],
+    queryFn: () => get<UpdateInfo>("/api/admin/update/check"),
+    enabled: isAdmin,
+    staleTime: 60 * 60_000,
+    retry: false,
+  });
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(DISMISSED_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const info = check.data;
+  if (!isAdmin || !info?.available || dismissed === info.latest) return null;
+  const dismiss = () => {
+    setDismissed(info.latest);
+    try {
+      localStorage.setItem(DISMISSED_KEY, info.latest);
+    } catch {
+      /* private mode: the banner will show again next visit */
+    }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b bg-primary/10 px-4 py-2 text-sm sm:px-6">
+      <Download className="size-4 shrink-0 text-primary" />
+      <span className="min-w-0 flex-1">
+        <span className="font-medium">{t("update.available")}</span>
+        {info.message && <span className="text-muted-foreground"> · {info.message}</span>}
+      </span>
+      <Button asChild size="sm">
+        <Link to="/admin/settings">{t("update.action")}</Link>
+      </Button>
+      <Button size="sm" variant="ghost" onClick={dismiss}>
+        {t("update.dismiss")}
+      </Button>
     </div>
   );
 }
@@ -226,6 +309,7 @@ export function AppShell() {
             </Button>
             <UserMenu />
           </header>
+          <UpdateBanner />
           <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
             <Outlet />
           </main>

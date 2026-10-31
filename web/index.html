@@ -4,12 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#16a34a" />
+    <meta name="description" content="MC Panel: бесплатная панель для хостинга Minecraft-серверов на своём VPS" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>MC Panel</title>
     <script src="/theme-init.js"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Boot splash: shown until React mounts, then replaced. Same drawing as components/Logo.tsx. -->
+      <div class="boot-splash" role="status" aria-label="Загрузка">
+        <svg viewBox="0 0 32 32" width="64" height="64" class="logo-bob" aria-hidden="true">
+          <path d="M16 2 28 9 16 16 4 9z" fill="#86efac" />
+          <path d="M4 9 16 16V30L4 23z" fill="#22c55e" />
+          <path d="M28 9 16 16V30L28 23z" fill="#15803d" />
+          <path d="M16 2 28 9V23L16 30 4 23V9z" fill="none" stroke="#052e16" stroke-width="1.2" stroke-linejoin="round" />
+          <path d="M16 16V30M4 9l12 7 12-7" fill="none" stroke="#052e16" stroke-width="1" stroke-linejoin="round" opacity=".55" />
+          <g transform="translate(4 9) matrix(1 .5833 0 1 0 0)" fill="#052e16">
+            <path d="M2 2.5h3v3H2zM7 2.5h3v3H7zM4.5 5.5h3v2h-3zM3.5 7.5h2v3h-2zM6.5 7.5h2v3h-2z" />
+          </g>
+          <g transform="translate(16 16) matrix(1 -.5833 0 1 0 0)" fill="#bbf7d0" opacity=".85">
+            <path d="M3.5 3h5v1.6h-5zM3.5 6.5h5v1.6h-5zM3.5 10h1.6v1.6H3.5z" />
+          </g>
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

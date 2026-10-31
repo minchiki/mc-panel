@@ -91,3 +91,27 @@
     display: none;
   }
 }
+
+/* Logo loader: used while the app boots and for full-page loading states. */
+@keyframes logo-bob {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.05);
+  }
+}
+.logo-bob {
+  animation: logo-bob 1.6s ease-in-out infinite;
+}
+.boot-splash {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-bob {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@ import { PageHeader, useCrumbs } from "@/components/AppShell";
 import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm";
+import { Switch } from "@/components/ui/overlays";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input } from "@/components/ui/primitives";
 import { errorText, get, post, put } from "@/lib/api";
 import { applyAccent } from "@/lib/utils";
@@ -16,9 +17,31 @@ interface Settings {
   panelName: string;
   telegramBotToken: string;
   telegramChatId: string;
+  telegramApiBase: string;
+  telegramRelayKey: string;
   discordWebhook: string;
+  notifyEvents: Record<NotifyEvent, boolean>;
   diskAlertPercent: number;
   curseforgeApiKey: string;
+}
+
+type NotifyEvent = "started" | "stopped" | "crash" | "backupOk" | "backupFailed" | "disk";
+
+const EVENTS: { key: NotifyEvent; label: string; hint: string }[] = [
+  { key: "started", label: "Сервер запущен", hint: "Когда сервер дошёл до состояния «онлайн»" },
+  { key: "stopped", label: "Сервер остановлен", hint: "Обычная остановка из панели" },
+  { key: "crash", label: "Сервер упал", hint: "Падение и бесконечные перезапуски" },
+  { key: "backupOk", label: "Бэкап создан", hint: "Каждый успешный бэкап, в том числе по расписанию" },
+  { key: "backupFailed", label: "Бэкап не удался", hint: "Ошибка при создании бэкапа" },
+  { key: "disk", label: "Мало места на диске", hint: "Диск VPS или лимит сервера" },
+];
+
+interface UpdateInfo {
+  current: string;
+  available: boolean;
+  behindBy: number;
+  latest: string;
+  message: string;
 }
 
 const ACCENTS = ["#22c55e", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#eab308"];
@@ -31,6 +54,7 @@ export default function AdminSettings() {
   const [form, setForm] = useState<Settings | null>(null);
   const [testing, setTesting] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const updateCheck = useQuery({ queryKey: ["update-check"], queryFn: () => get<UpdateInfo>("/api/admin/update/check"), staleTime: 60 * 60_000 });
   const updateLog = useQuery({ queryKey: ["update-log"], queryFn: () => get<{ log: string }>("/api/admin/update/status"), refetchInterval: updating ? 3000 : false });
 
   useEffect(() => {
@@ -138,7 +162,7 @@ export default function AdminSettings() {
             <CardTitle className="flex items-center gap-2">
               <Bell className="size-4" /> Уведомления
             </CardTitle>
-            <CardDescription>Падение сервера, бесконечные перезапуски, нехватка диска</CardDescription>
+            <CardDescription>Сообщения в Telegram и Discord о том, что происходит с серверами. Выберите, о чём писать.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Field label="Токен Telegram-бота" hint="Создайте бота у @BotFather. Сохранённый токен показан звёздочками.">
@@ -150,6 +174,29 @@ export default function AdminSettings() {
             <Field label="Discord webhook" hint="Настройки канала → Интеграции → Вебхуки">
               <Input value={form.discordWebhook} onChange={(e) => set("discordWebhook", e.target.value)} placeholder="https://discord.com/api/webhooks/…" />
             </Field>
+            <details className="rounded-lg border px-3 py-2 text-sm">
+              <summary className="cursor-pointer font-medium">Telegram заблокирован на VPS? Через relay</summary>
+              <div className="mt-3 space-y-4">
+                <Field label="Адрес relay" hint="Например https://my-relay.vercel.app/tg. Пусто = напрямую через api.telegram.org">
+                  <Input value={form.telegramApiBase} onChange={(e) => set("telegramApiBase", e.target.value)} placeholder="https://…/tg" />
+                </Field>
+                <Field label="Ключ relay" hint="Сохранённый ключ показан звёздочками">
+                  <Input value={form.telegramRelayKey} onChange={(e) => set("telegramRelayKey", e.target.value)} autoComplete="off" />
+                </Field>
+              </div>
+            </details>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">О чём уведомлять</p>
+              {EVENTS.map((e) => (
+                <label key={e.key} className="flex cursor-pointer items-center justify-between gap-4 rounded-lg px-1 py-2 hover:bg-accent/50">
+                  <span className="min-w-0">
+                    <span className="block text-sm">{e.label}</span>
+                    <span className="block text-xs text-muted-foreground">{e.hint}</span>
+                  </span>
+                  <Switch checked={form.notifyEvents[e.key]} onCheckedChange={(v) => set("notifyEvents", { ...form.notifyEvents, [e.key]: v })} />
+                </label>
+              ))}
+            </div>
             <Field label="Порог заполнения диска VPS, %">
               <Input type="number" min={50} max={99} value={form.diskAlertPercent} onChange={(e) => set("diskAlertPercent", Number(e.target.value))} />
             </Field>
@@ -181,6 +228,14 @@ export default function AdminSettings() {
             <CardDescription>Перед обновлением автоматически делается бэкап базы панели в /var/backups/mc-panel.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {updateCheck.data?.available ? (
+              <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
+                Доступна новая версия: {updateCheck.data.behindBy} {updateCheck.data.behindBy === 1 ? "обновление" : "обновлений"}
+                {updateCheck.data.message && <>. Последнее: «{updateCheck.data.message}»</>}
+              </p>
+            ) : (
+              updateCheck.data && <p className="text-sm text-muted-foreground">Установлена последняя известная версия ({updateCheck.data.current || "dev"}).</p>
+            )}
             <Button onClick={() => void update()} loading={updating}>
               Обновить панель
             </Button>

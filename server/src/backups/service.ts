@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { all, one, run } from "../db/index.js";
 import { randomId } from "../lib/crypto.js";
 import { conflict, errorMessage, notFound } from "../lib/errors.js";
+import { notify } from "../lib/notify.js";
 import { invalidateDisk } from "../servers/disk.js";
 import { backupDirOf, dataDirOf, getServer } from "../servers/repo.js";
 import { runtime, sendCommand, withServerStopped } from "../servers/runtime.js";
@@ -109,11 +110,13 @@ export async function createBackup(serverId: string, name: string): Promise<Back
     const size = (await stat(join(dir, file))).size;
     run("UPDATE backups SET status = 'done', size_bytes = ? WHERE id = ?", size, id);
     rt.panel(`Бэкап «${name}» создан (${(size / 1024 / 1024).toFixed(1)} МБ)`);
+    void notify(`backup:${id}`, `💾 Бэкап «${name}» сервера «${server.name}» создан (${(size / 1024 / 1024).toFixed(1)} МБ).`, "backupOk");
     await pruneBackups(serverId);
   } catch (err) {
     run("UPDATE backups SET status = 'failed', error = ? WHERE id = ?", errorMessage(err), id);
     await rm(join(dir, `${file}.part`), { force: true });
     rt.panel(`Бэкап не удался: ${errorMessage(err)}`);
+    void notify(`backup:${id}`, `❌ Бэкап «${name}» сервера «${server.name}» не удался: ${errorMessage(err)}`, "backupFailed");
     throw err;
   } finally {
     if (live && rt.status === "online") {

@@ -6,6 +6,8 @@ import { decrypt, encrypt, randomId, safeEqual } from "./crypto.js";
 import { assertFileName, isWithin, resolveExisting, resolveInside, writeNoFollow } from "./paths.js";
 import { applyUpdates, parseProperties, serializeProperties, toRecord } from "./properties.js";
 import { explainNetworkError } from "./http.js";
+import { telegramRequest } from "./notify.js";
+import { parseCompare } from "./updateCheck.js";
 import { parseListResponse, parseTpsResponse, stripColors } from "./rcon.js";
 
 describe("resolveInside", () => {
@@ -141,5 +143,37 @@ describe("explainNetworkError", () => {
   it("falls back to the raw code", () => {
     expect(explainNetworkError("WEIRD")).toBe("WEIRD");
     expect(explainNetworkError(undefined)).toContain("неизвестная");
+  });
+});
+
+describe("parseCompare", () => {
+  it("reports an update when main is ahead of the installed commit", () => {
+    const info = parseCompare("abc1234", { status: "ahead", ahead_by: 2, commits: [{ sha: "1111111aaaa", commit: { message: "one" } }, { sha: "2222222bbbb", commit: { message: "feat: new thing\n\nbody" } }] });
+    expect(info).toEqual({ current: "abc1234", available: true, behindBy: 2, latest: "2222222", message: "feat: new thing" });
+  });
+
+  it("stays silent when identical, behind or diverged", () => {
+    for (const status of ["identical", "behind", "diverged"]) expect(parseCompare("abc1234", { status, ahead_by: 3 }).available).toBe(false);
+  });
+});
+
+describe("notify gating", () => {
+  it("telegramRequest uses relay headers only when a relay key is set", async () => {
+    const calls: { url: string; headers: Record<string, string> }[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (url: string, init: { headers: Record<string, string> }) => {
+      calls.push({ url, headers: init.headers });
+      return new Response("{}");
+    }) as typeof fetch;
+    try {
+      await telegramRequest({ telegramBotToken: "1:abc", telegramApiBase: "", telegramRelayKey: "" }, "hi", "42");
+      await telegramRequest({ telegramBotToken: "1:abc", telegramApiBase: "https://relay.example/tg/", telegramRelayKey: "k" }, "hi", "42");
+    } finally {
+      globalThis.fetch = real;
+    }
+    expect(calls[0]?.url).toBe("https://api.telegram.org/bot1:abc/sendMessage");
+    expect(calls[0]?.headers["x-relay-key"]).toBeUndefined();
+    expect(calls[1]?.url).toBe("https://relay.example/tg/sendMessage");
+    expect(calls[1]?.headers).toMatchObject({ "x-relay-key": "k", "x-bot-token": "1:abc" });
   });
 });

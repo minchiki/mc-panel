@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { CreeperIcon } from "@/components/CreeperIcon";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Card, Field, Input } from "@/components/ui/primitives";
 import { useAuth } from "@/hooks/auth";
@@ -16,9 +16,7 @@ function AuthLayout({ title, subtitle, children }: { title: string; subtitle: st
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.18),transparent_60%)]" />
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-            <CreeperIcon className="size-7" />
-          </div>
+          <Logo className="size-16 drop-shadow-[0_6px_16px_hsl(var(--primary)/0.35)]" />
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>

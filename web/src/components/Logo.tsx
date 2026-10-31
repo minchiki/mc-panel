@@ -1,0 +1,18 @@
+/** Panel logo: an isometric block with a creeper face on one side and server-rack slots on the other. Same drawing as favicon.svg. */
+export function Logo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
+      <path d="M16 2 28 9 16 16 4 9z" fill="#86efac" />
+      <path d="M4 9 16 16V30L4 23z" fill="#22c55e" />
+      <path d="M28 9 16 16V30L28 23z" fill="#15803d" />
+      <path d="M16 2 28 9V23L16 30 4 23V9z" fill="none" stroke="#052e16" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M16 16V30M4 9l12 7 12-7" fill="none" stroke="#052e16" strokeWidth="1" strokeLinejoin="round" opacity=".55" />
+      <g transform="translate(4 9) matrix(1 .5833 0 1 0 0)" fill="#052e16">
+        <path d="M2 2.5h3v3H2zM7 2.5h3v3H7zM4.5 5.5h3v2h-3zM3.5 7.5h2v3h-2zM6.5 7.5h2v3h-2z" />
+      </g>
+      <g transform="translate(16 16) matrix(1 -.5833 0 1 0 0)" fill="#bbf7d0" opacity=".85">
+        <path d="M3.5 3h5v1.6h-5zM3.5 6.5h5v1.6h-5zM3.5 10h1.6v1.6H3.5z" />
+      </g>
+    </svg>
+  );
+}

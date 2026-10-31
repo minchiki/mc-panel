@@ -159,6 +159,7 @@ async function attachIo(rt: Runtime): Promise<void> {
     if (rt.status === "starting" && isReadyLine(core, line)) {
       rt.setStatus("online");
       rt.panel("Сервер готов к подключению");
+      void notify(`started:${rt.id}`, `🟢 Сервер «${getServer(rt.id).name}» запущен.`, "started");
     }
     const login = parsePlayerAddress(line);
     if (login) rt.playerAddrs.set(login.player, login.address);
@@ -199,6 +200,7 @@ function onExit(rt: Runtime, code: number): void {
   if (!server) return;
   if (rt.expectingExit) {
     rt.panel("Сервер остановлен");
+    void notify(`stopped:${rt.id}`, `🔴 Сервер «${server.name}» остановлен.`, "stopped");
     rt.setStatus("offline");
     return;
   }

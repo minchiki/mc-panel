@@ -1,7 +1,8 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { Spinner } from "./components/Spinner";
+import { ChannelPrompt } from "./components/ChannelPrompt";
+import { LogoLoader } from "./components/LogoLoader";
 import { useAuth } from "./hooks/auth";
 import { LoginPage, RegisterPage } from "./pages/Login";
 import { ServersPage } from "./pages/Servers";
@@ -29,7 +30,7 @@ const AdminSettings = lazy(() => import("./pages/admin/Settings"));
 function RequireAuth({ children, admin }: { children: ReactNode; admin?: boolean }) {
   const { user, loading } = useAuth();
   const location = useLocation();
-  if (loading) return <Spinner className="flex min-h-dvh items-center justify-center" />;
+  if (loading) return <LogoLoader />;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (admin && user.role !== "admin") return <Navigate to="/" replace />;
   return <>{children}</>;
@@ -37,7 +38,8 @@ function RequireAuth({ children, admin }: { children: ReactNode; admin?: boolean
 
 export function App() {
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<LogoLoader />}>
+      <ChannelPrompt />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

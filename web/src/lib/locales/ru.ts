@@ -10,6 +10,10 @@ export const ru = {
     adminLogs: "Системные логи",
     adminSettings: "Настройки панели",
     logout: "Выйти",
+    help: "Помощь",
+    helpHint: "Бот в Telegram",
+    channel: "Канал автора",
+    channelHint: "Новости и обновления",
     theme: "Тема",
     themeDark: "Тёмная",
     themeLight: "Светлая",
@@ -71,6 +75,17 @@ export const ru = {
     restartNeeded: "Изменения вступят в силу после перезапуска сервера",
     error: "Ошибка",
     noAccess: "Недостаточно прав для этого раздела",
+  },
+  update: {
+    available: "Доступна новая версия панели",
+    action: "Обновить",
+    dismiss: "Скрыть",
+  },
+  channel: {
+    title: "Панель полностью бесплатная",
+    text: "MC Panel ничего не стоит и без рекламы. Лучшая благодарность автору — подписка на Telegram-канал: там обновления, новые функции и помощь.",
+    subscribe: "Подписаться на канал",
+    later: "Позже",
   },
 } as const;
 

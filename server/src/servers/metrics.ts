@@ -40,7 +40,7 @@ async function sampleAll(): Promise<void> {
     const rt = runtime(server.id);
     const diskMb = (await serverDiskBytes(server.id)) / 1024 / 1024;
     if (diskMb > server.disk_mb) {
-      void notify(`quota:${server.id}`, `💾 Сервер «${server.name}» превысил лимит диска: ${Math.round(diskMb)} из ${server.disk_mb} МБ.`);
+      void notify(`quota:${server.id}`, `💾 Сервер «${server.name}» превысил лимит диска: ${Math.round(diskMb)} из ${server.disk_mb} МБ.`, "disk");
     }
     if (rt.status !== "online") continue;
     if (usesServerProperties(server.core)) {
@@ -68,7 +68,7 @@ async function checkHostDisk(): Promise<void> {
   const { totalBytes, freeBytes } = await hostDisk(config.SERVERS_DIR);
   const usedPct = ((totalBytes - freeBytes) / totalBytes) * 100;
   if (usedPct >= getSettings().diskAlertPercent) {
-    void notify("host-disk", `💾 Диск VPS заполнен на ${usedPct.toFixed(0)}% (свободно ${(freeBytes / 1024 ** 3).toFixed(1)} ГБ).`);
+    void notify("host-disk", `💾 Диск VPS заполнен на ${usedPct.toFixed(0)}% (свободно ${(freeBytes / 1024 ** 3).toFixed(1)} ГБ).`, "disk");
   }
 }
 

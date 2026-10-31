@@ -12,6 +12,10 @@ export const en: Messages = {
     adminLogs: "System logs",
     adminSettings: "Panel settings",
     logout: "Log out",
+    help: "Help",
+    helpHint: "Telegram bot",
+    channel: "Author's channel",
+    channelHint: "News and updates",
     theme: "Theme",
     themeDark: "Dark",
     themeLight: "Light",
@@ -73,5 +77,16 @@ export const en: Messages = {
     restartNeeded: "Changes take effect after a server restart",
     error: "Error",
     noAccess: "You don't have permission for this section",
+  },
+  update: {
+    available: "A new panel version is available",
+    action: "Update",
+    dismiss: "Dismiss",
+  },
+  channel: {
+    title: "The panel is completely free",
+    text: "MC Panel costs nothing and has no ads. The best way to say thanks is to subscribe to the author's Telegram channel: updates, new features and help.",
+    subscribe: "Subscribe to the channel",
+    later: "Later",
   },
 };
