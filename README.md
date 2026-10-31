@@ -9,7 +9,9 @@
 ![Docker](https://img.shields.io/badge/Docker-isolated%20servers-2496ED?logo=docker&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-22-5FA04E?logo=node.js&logoColor=white)
 
-[Установка для новичков](docs/INSTALL.md) · [Быстрый старт](#установка) · [Безопасность](#безопасность) · [Решения и причины](docs/DECISIONS.md)
+**[🚀 Установка за 10 минут: просто делайте по шагам](docs/QUICKSTART.md)**
+
+[Подробная инструкция](docs/INSTALL.md) · [Бот-помощник в Telegram](https://t.me/faqmcpanel_bot) · [Быстрый старт](#установка) · [Безопасность](#безопасность) · [Решения и причины](docs/DECISIONS.md)
 
 </div>
 
@@ -34,7 +36,7 @@
 
 ## Установка
 
-**Новичку:** [пошаговая инструкция с нуля](docs/INSTALL.md): от покупки VPS до первого сервера, с разбором частых ошибок.
+**Новичку:** [установка за 10 минут](docs/QUICKSTART.md) или [подробная инструкция с нуля](docs/INSTALL.md): от покупки VPS до первого сервера, с разбором частых ошибок.
 
 **Быстро.** На чистой Ubuntu 22.04/24.04 (или Debian 12) от root:
 
