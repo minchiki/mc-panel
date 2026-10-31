@@ -1,6 +1,7 @@
 <div align="center">
 
 # MC Panel
+<img width="1280" height="640" alt="github-social-preview" src="https://github.com/user-attachments/assets/50a8f7fc-42ee-4438-848c-4a1a513907da" />
 
 **Свой хостинг Minecraft-серверов на вашем VPS. Установка одной командой, управление из браузера.**
 
