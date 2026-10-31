@@ -123,7 +123,7 @@ export default function AccessTab() {
                   <Input value={edit.username} onChange={(e) => setEdit({ ...edit, username: e.target.value })} autoFocus />
                 </Field>
               )}
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(subs.data?.available ?? []).map((p) => (
                   <label key={p} className="flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 hover:bg-muted/50">
                     <input

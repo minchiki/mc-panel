@@ -59,7 +59,7 @@ export default function NetworkTab() {
             <Save /> Сохранить
           </Button>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Порт">
             <Input inputMode="numeric" value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ""))} />
           </Field>
@@ -78,7 +78,7 @@ export default function NetworkTab() {
           <ol className="list-decimal space-y-4 pl-5">
             <li>
               <p className="font-medium">A-запись на IP сервера</p>
-              <div className="mt-2 grid gap-2 rounded-lg bg-muted/60 p-3 font-mono text-xs sm:grid-cols-3">
+              <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg bg-muted/60 p-3 font-mono text-xs sm:grid-cols-3">
                 <span>Имя: {domain || "play.example.com"}</span>
                 <span>Тип: A</span>
                 <span className="flex items-center gap-1">
@@ -89,7 +89,7 @@ export default function NetworkTab() {
             {server.port !== 25565 && (
               <li>
                 <p className="font-medium">SRV-запись, чтобы не писать порт</p>
-                <div className="mt-2 grid gap-2 rounded-lg bg-muted/60 p-3 font-mono text-xs sm:grid-cols-2">
+                <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg bg-muted/60 p-3 font-mono text-xs sm:grid-cols-2">
                   <span className="flex items-center gap-1 break-all">
                     Имя: {srvName} <CopyButton text={srvName} />
                   </span>

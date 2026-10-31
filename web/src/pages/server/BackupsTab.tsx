@@ -88,7 +88,7 @@ export default function BackupsTab() {
   const backups = data.data?.backups ?? [];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <Card>
         <CardHeader>
           <CardTitle>Бэкапы</CardTitle>

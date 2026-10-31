@@ -126,7 +126,7 @@ export default function AddonsTab() {
 
   return (
     <div className="space-y-6">
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <Card className="order-2 xl:order-1">
         <CardHeader>
           <CardTitle>Каталог</CardTitle>
@@ -163,7 +163,7 @@ export default function AddonsTab() {
           ) : search.data?.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Ничего не найдено</p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {search.data?.map((item) => (
                 <div key={`${item.source}-${item.id}`} className="flex gap-3 rounded-lg border p-3 transition-colors hover:border-primary/40">
                   {item.icon ? (

@@ -73,7 +73,7 @@ function ResourcesCard() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Название">
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={48} />
           </Field>
@@ -163,7 +163,7 @@ function ReinstallCard() {
         <CardDescription>Обновление версии или смена ядра (например, Vanilla → Paper) с сохранением мира.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Ядро">
             <Select
               value={core}

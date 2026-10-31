@@ -137,7 +137,7 @@ export function PropertiesCard({ server }: { server: Server }) {
               <h4 className="text-sm font-semibold">{group.title}</h4>
               {group.description && <p className="text-xs text-muted-foreground">{group.description}</p>}
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {group.fields.map((f) => (
                 <FieldControl key={f.key} field={f} value={values[f.key] ?? ""} onChange={set(f.key)} />
               ))}
@@ -152,7 +152,7 @@ export function PropertiesCard({ server }: { server: Server }) {
               Другие параметры ({otherKeys.length})
             </button>
             {showOther && (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {otherKeys.map((k) => (
                   <Field key={k} label={<span className="font-mono text-xs">{k}</span>}>
                     <Input value={values[k] ?? ""} onChange={(e) => set(k)(e.target.value)} />

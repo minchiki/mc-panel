@@ -1,3 +1,4 @@
+import os from "node:os";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { currentUser, requireUser, serverAccess } from "../auth/guard.js";
@@ -25,6 +26,7 @@ export async function serverRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/cores", { preHandler: requireUser }, async () => ({
     cores: CORES.map((c) => CORE_INFO[c]),
     java: JAVA_VERSIONS,
+    hostRamMb: Math.round(os.totalmem() / 1048576),
   }));
 
   app.get<{ Params: { core: string } }>("/api/cores/:core/versions", { preHandler: requireUser }, async (req) => {

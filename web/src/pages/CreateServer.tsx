@@ -65,7 +65,7 @@ export default function CreateServerPage() {
   const [port, setPort] = useState("");
   const [eula, setEula] = useState(false);
 
-  const cores = useQuery({ queryKey: ["cores"], queryFn: () => get<{ cores: CoreInfo[]; java: number[] }>("/api/cores"), staleTime: Infinity });
+  const cores = useQuery({ queryKey: ["cores"], queryFn: () => get<{ cores: CoreInfo[]; java: number[]; hostRamMb?: number }>("/api/cores"), staleTime: Infinity });
   const versions = useQuery({
     queryKey: ["versions", core],
     queryFn: async () => (await get<{ versions: VersionEntry[] }>(`/api/cores/${core}/versions`)).versions,
@@ -125,7 +125,7 @@ export default function CreateServerPage() {
       <Stepper step={step} />
 
       {step === 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {cores.data?.cores.map((c) => (
             <button
               key={c.id}
@@ -224,9 +224,14 @@ export default function CreateServerPage() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">Ванильному серверу на 5–10 игроков хватит 2 ГБ, сборке модов нужно 4–8 ГБ.</p>
+              {cores.data?.hostRamMb !== undefined && ramMb > cores.data.hostRamMb - 1024 && (
+                <p className="rounded-lg bg-warning/10 p-3 text-xs text-warning">
+                  На этом VPS всего {formatMb(cores.data.hostRamMb)} памяти. Оставьте хотя бы 1 ГБ запаса для системы и панели, иначе сервер будет «убит» при запуске. Выберите меньше.
+                </p>
+              )}
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label={<span className="flex items-center gap-2"><Cpu className="size-4 text-muted-foreground" /> Ядра CPU</span>} hint="Сколько ядер может занять сервер">
                 <Select value={cpuLimit} onChange={(e) => setCpuLimit(Number(e.target.value))} disabled={!isAdmin}>
                   {[0.5, 1, 1.5, 2, 3, 4].map((c) => (

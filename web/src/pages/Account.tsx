@@ -267,7 +267,7 @@ export default function AccountPage() {
   return (
     <>
       <PageHeader title={user.username} description={`${user.role === "admin" ? "Администратор" : "Пользователь"} · лимит: ${user.maxServers} серв., ${Math.round(user.maxRamMb / 1024)} ГБ RAM`} />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <PasswordCard />
         <div className="space-y-6">
           <TwoFactorCard user={user} />

@@ -85,7 +85,7 @@ export default function MonitoringTab() {
               Данные собираются раз в 30 секунд, пока сервер запущен. Графики заполнятся через пару минут после старта.
             </p>
           )}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <MetricChart title="CPU, % от лимита" current={live ? `${Math.round(live.cpu / server.cpuLimit)}%` : "—"} points={series("cpu").map((p) => ({ ...p, value: p.value === null ? null : p.value / server.cpuLimit }))} format={(v) => `${Math.round(v)}%`} domain={[0, 100]} timeFormat={timeFormat} />
             <MetricChart title="Память" current={live ? `${formatMb(live.memMb)} / ${formatMb(server.ramMb)}` : "—"} points={series("mem_mb")} format={(v) => formatMb(v)} domain={[0, server.ramMb]} timeFormat={timeFormat} />
             <MetricChart title="Игроки онлайн" current={String(server.players.length)} points={series("players")} format={(v) => String(Math.round(v))} timeFormat={timeFormat} />

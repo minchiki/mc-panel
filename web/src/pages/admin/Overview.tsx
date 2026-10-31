@@ -44,7 +44,7 @@ export default function AdminOverview() {
   return (
     <>
       <PageHeader title="Обзор VPS" description={`${host.hostname} · версия панели ${data.data.version.split("\n")[0]}`} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tile icon={<Cpu />} label={`CPU · ${host.cpus} ядра`} value={`${host.cpuPercent}%`} pct={host.cpuPercent} sub={`Нагрузка: ${host.load.map((l) => l.toFixed(2)).join(" / ")}`} />
         <Tile icon={<MemoryStick />} label="Память" value={`${formatBytes(memUsed)} / ${formatBytes(host.memTotal)}`} pct={(memUsed / host.memTotal) * 100} sub={`Выделено серверам: ${formatMb(s.allocatedRamMb)} (${Math.round(ramPct)}%)`} />
         <Tile icon={<HardDrive />} label="Диск" value={`${formatBytes(diskUsed)} / ${formatBytes(host.diskTotal)}`} pct={(diskUsed / host.diskTotal) * 100} sub={`Свободно ${formatBytes(host.diskFree)}`} />

@@ -88,7 +88,7 @@ export function ServersPage() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {[0, 1, 2].map((i) => (
           <Skeleton key={i} className="h-60" />
         ))}
@@ -131,7 +131,7 @@ export function ServersPage() {
           }
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {data.map((s) => (
             <ServerCard key={s.id} server={s} />
           ))}

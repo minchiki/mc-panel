@@ -77,7 +77,7 @@ export default function PlayersTab() {
           {server.players.length === 0 ? (
             <EmptyState icon={<Users />} title="Никого нет" description={online ? `Подключение: ${server.address}` : undefined} className="py-8" />
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {server.players.map((p) => (
                 <li key={p} className="flex items-center gap-3 rounded-lg border p-2.5">
                   <Avatar name={p} />
@@ -124,7 +124,7 @@ export default function PlayersTab() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <ListCard title="Вайтлист" description="Включается в «Настройки» → white-list" empty="Список пуст">
           {d.whitelist.map((w) => (
             <li key={w.name} className="flex items-center gap-2 py-2">

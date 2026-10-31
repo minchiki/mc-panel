@@ -153,7 +153,7 @@ export default function AdminUsers() {
           {draft && (
             <div className="space-y-4">
               {!draft.id && (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Имя">
                     <Input value={draft.username} onChange={(e) => setDraft({ ...draft, username: e.target.value })} />
                   </Field>
@@ -165,7 +165,7 @@ export default function AdminUsers() {
               <Field label={draft.id ? "Новый пароль (оставьте пустым, чтобы не менять)" : "Пароль"} hint="Минимум 10 символов">
                 <Input type="password" autoComplete="new-password" value={draft.password} onChange={(e) => setDraft({ ...draft, password: e.target.value })} />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Field label="Роль">
                   <Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>
                     <option value="user">Пользователь</option>
