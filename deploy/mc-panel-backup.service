@@ -1,0 +1,6 @@
+[Unit]
+Description=Back up MC Panel database and configuration
+
+[Service]
+Type=oneshot
+ExecStart=/opt/mc-panel/scripts/backup.sh

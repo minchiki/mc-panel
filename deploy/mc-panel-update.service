@@ -1,0 +1,7 @@
+[Unit]
+Description=Update MC Panel (requested from the web UI)
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/rm -f /var/lib/mc-panel/update-requested
+ExecStart=/bin/sh -c '/opt/mc-panel/scripts/update.sh >> /var/log/mc-panel/update.log 2>&1'

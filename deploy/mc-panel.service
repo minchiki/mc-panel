@@ -1,0 +1,33 @@
+[Unit]
+Description=MC Panel (Minecraft hosting panel)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=mcpanel
+Group=mcpanel
+SupplementaryGroups=docker systemd-journal
+WorkingDirectory=/opt/mc-panel/server
+EnvironmentFile=/etc/mc-panel/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=3
+LimitNOFILE=65536
+
+# Hardening: the panel only writes to its data, game data and logs.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/mc-panel /srv/minecraft /var/log/mc-panel
+
+[Install]
+WantedBy=multi-user.target
