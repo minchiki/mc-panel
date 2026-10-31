@@ -25,7 +25,6 @@ die() { printf '\033[1;31mОШИБКА:\033[0m %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "запустите от root: sudo bash bootstrap.sh"
 command -v apt-get >/dev/null || die "нужен Ubuntu или Debian (не найден apt-get)"
-case "$REPO_URL" in *OWNER*) die "в REPO_URL не подставлен адрес репозитория, см. инструкцию";; esac
 
 if [ -r /etc/os-release ]; then
   . /etc/os-release

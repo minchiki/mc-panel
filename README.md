@@ -40,7 +40,7 @@
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/minchiki/mc-panel/main/scripts/bootstrap.sh -o bootstrap.sh
-REPO_URL=https://github.com/minchiki/mc-panel.git bash bootstrap.sh
+sudo bash bootstrap.sh
 ```
 
 `bootstrap.sh` сам ставит Docker, Node.js 22, nginx и fail2ban, скачивает панель в `/opt/mc-panel` и запускает `scripts/install.sh`. Скрипты идемпотентные: их можно запускать повторно. `install.sh`:

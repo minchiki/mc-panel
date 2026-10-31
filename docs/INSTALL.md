@@ -124,7 +124,7 @@ curl -fsSL https://raw.githubusercontent.com/minchiki/mc-panel/main/scripts/boot
 Теперь запустите его:
 
 ```sh
-REPO_URL=https://github.com/minchiki/mc-panel.git bash bootstrap.sh
+sudo bash bootstrap.sh
 ```
 
 Что произойдёт: установщик сам поставит Docker, Node.js, nginx и защиту от подбора паролей (fail2ban), скачает панель, соберёт её и запустит. Вы увидите зелёные строки `==>` с этапами. **Займёт это 3-7 минут.** Не закрывайте окно и ничего не нажимайте.
