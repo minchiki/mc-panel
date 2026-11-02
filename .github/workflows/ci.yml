@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults: { run: { working-directory: server } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: server/package-lock.json }
       - run: npm ci --no-audit --no-fund
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults: { run: { working-directory: web } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
       - run: npm ci --no-audit --no-fund
@@ -33,7 +33,7 @@ jobs:
     name: Install scripts (syntax)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: bash -n
         run: for f in scripts/*.sh; do echo "== $f"; bash -n "$f"; done
       - name: shellcheck (errors only)
