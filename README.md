@@ -158,3 +158,7 @@ cd web && npm install && npm run dev     # фронтенд с прокси на
 
 Стек: Fastify 5 + TypeScript + `node:sqlite` + dockerode; React 18 + Vite + Tailwind + Radix (компоненты в стиле shadcn/ui) + TanStack Query + Monaco + Recharts.
 Неочевидные решения описаны в [docs/DECISIONS.md](docs/DECISIONS.md).
+
+---
+
+Новости и другие проекты: [HUICODING](https://t.me/huicoding).
