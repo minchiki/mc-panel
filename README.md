@@ -12,7 +12,7 @@
 
 **[🚀 Установка за 10 минут: просто делайте по шагам](docs/QUICKSTART.md)**
 
-[Подробная инструкция](docs/INSTALL.md) · [FAQ](docs/FAQ.md) · [Бот-помощник в Telegram](https://t.me/faqmcpanel_bot) · [Быстрый старт](#установка) · [Безопасность](#безопасность) · [Решения и причины](docs/DECISIONS.md)
+[🌐 Сайт](https://mcpanel-ru.vercel.app) · [Подробная инструкция](docs/INSTALL.md) · [FAQ](docs/FAQ.md) · [Бот-помощник в Telegram](https://t.me/faqmcpanel_bot) · [Быстрый старт](#установка) · [Безопасность](#безопасность) · [Решения и причины](docs/DECISIONS.md)
 
 </div>
 

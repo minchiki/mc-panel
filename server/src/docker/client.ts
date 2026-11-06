@@ -1,5 +1,5 @@
 import Docker from "dockerode";
-import archiver from "archiver";
+import { TarArchive, ZipArchive } from "archiver";
 import { PassThrough, type Duplex } from "node:stream";
 
 /**
@@ -205,7 +205,7 @@ export async function runOneShot(opts: {
 
 /** Build a local image from an in-memory Dockerfile (used for the BuildTools image). */
 export async function buildImage(tag: string, dockerfile: string, onLine: (line: string) => void): Promise<void> {
-  const tar = archiver("tar");
+  const tar = new TarArchive();
   tar.append(dockerfile, { name: "Dockerfile" });
   void tar.finalize();
   const stream = await docker.buildImage(tar as unknown as NodeJS.ReadableStream, { t: tag, labels: { "mc-panel": "1" } });

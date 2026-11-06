@@ -65,7 +65,7 @@ export async function serverRoutes(app: FastifyInstance): Promise<void> {
         diskMb: diskSchema,
         port: z.coerce.number().int().optional(),
         ownerId: z.coerce.number().int().optional(),
-        acceptEula: z.literal(true, { errorMap: () => ({ message: "Нужно принять Minecraft EULA" }) }),
+        acceptEula: z.literal(true, { error: "Нужно принять Minecraft EULA" }),
       }),
       req.body,
     );

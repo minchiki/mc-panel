@@ -1,4 +1,4 @@
-import archiver from "archiver";
+import { TarArchive, ZipArchive } from "archiver";
 import { createReadStream, createWriteStream } from "node:fs";
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
@@ -175,7 +175,7 @@ export async function zipPaths(serverId: string, paths: string[], destName: stri
   const dest = join(destDir, destName.endsWith(".zip") ? destName : `${destName}.zip`);
   if (await exists(dest)) throw conflict("Архив с таким именем уже есть");
   await assertQuota(serverId, 0);
-  const archive = archiver("zip", { zlib: { level: 6 } });
+  const archive = new ZipArchive({ zlib: { level: 6 } });
   const out = createWriteStream(dest, { flags: "wx" });
   const done = pipeline(archive, out);
   for (const p of paths) {
