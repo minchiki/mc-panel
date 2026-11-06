@@ -51,7 +51,7 @@ export async function serverConfigRoutes(app: FastifyInstance): Promise<void> {
   app.put<IdParams>("/api/servers/:id/properties", { preHandler: requireUser }, async (req) => {
     const { server } = serverFor(req, "settings");
     if (!usesServerProperties(server.core)) throw badRequest("У этого ядра нет server.properties");
-    const { values } = parse(z.object({ values: z.record(z.string().max(4000)) }), req.body);
+    const { values } = parse(z.object({ values: z.record(z.string(), z.string().max(4000)) }), req.body);
     const updates: Record<string, string> = {};
     for (const [key, value] of Object.entries(values)) {
       if (!/^[a-z0-9.-]{1,64}$/.test(key)) throw badRequest(`Недопустимый ключ: ${key}`);

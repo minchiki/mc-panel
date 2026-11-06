@@ -1,4 +1,4 @@
-import archiver from "archiver";
+import { TarArchive, ZipArchive } from "archiver";
 import { createWriteStream } from "node:fs";
 import { copyFile, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
@@ -247,7 +247,7 @@ async function writeClientZip(server: ServerRow, work: string, job: BuildJob): P
   const zipPath = clientZipPath(server.id);
   const tmp = `${zipPath}.part`;
   await rm(tmp, { force: true });
-  const archive = archiver("zip", { zlib: { level: 6 } });
+  const archive = new ZipArchive({ zlib: { level: 6 } });
   const done = pipeline(archive, createWriteStream(tmp, { flags: "wx" }));
   for (const f of await readdir(join(work, "mods"))) archive.file(join(work, "mods", f), { name: `mods/${f}` });
   const loader = CORE_INFO[server.core].name;
