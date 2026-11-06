@@ -130,7 +130,7 @@ export default function SchedulesTab() {
             {list.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-3 p-3">
                 <Switch checked={Boolean(s.enabled)} onCheckedChange={() => void toggle(s)} />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-48">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{s.name}</span>
                     <Badge variant="secondary">{ACTIONS[s.action].label}</Badge>

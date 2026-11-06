@@ -121,7 +121,7 @@ export default function DatabasesTab() {
             {data.data!.map((db) => (
               <li key={db.id} className="flex flex-wrap items-center gap-3 p-3">
                 <Database className="size-4 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-48">
                   <p className="font-mono text-sm font-medium">{db.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {db.username} · создана {formatDate(db.createdAt)}

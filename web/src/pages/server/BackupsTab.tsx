@@ -124,7 +124,7 @@ export default function BackupsTab() {
                       <Archive className="size-4 text-muted-foreground" />
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-48">
                     <p className="truncate font-medium">{b.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDateFull(b.created_at)} ·{" "}
@@ -132,7 +132,7 @@ export default function BackupsTab() {
                     </p>
                   </div>
                   {b.status === "done" && (
-                    <div className="flex gap-1">
+                    <div className="ml-auto flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => void restore(b)}>
                         <ArchiveRestore /> Восстановить
                       </Button>
