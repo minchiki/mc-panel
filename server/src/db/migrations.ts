@@ -149,4 +149,28 @@ export const migrations: string[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  `
+  CREATE TABLE password_resets (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    ip TEXT
+  );
+  CREATE INDEX password_resets_user ON password_resets (user_id, created_at);
+
+  -- Reset links go only to a confirmed address; emails set before this existed count as confirmed.
+  ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0;
+  UPDATE users SET email_verified = 1 WHERE email IS NOT NULL;
+
+  CREATE TABLE email_verifications (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+  `,
 ];

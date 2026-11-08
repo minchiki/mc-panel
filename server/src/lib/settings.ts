@@ -23,6 +23,15 @@ export interface PanelSettings {
   notifyEvents: NotifyEvents;
   diskAlertPercent: number;
   curseforgeApiKey: string;
+  /** Outgoing mail for password reset. Port 465 = TLS from the start, 587/25 = STARTTLS. */
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  /** "MC Panel <panel@example.com>" or a bare address. */
+  smtpFrom: string;
+  /** Public address of the panel, used for links in emails (never taken from the request Host header). */
+  panelUrl: string;
 }
 
 const DEFAULTS: PanelSettings = {
@@ -37,6 +46,12 @@ const DEFAULTS: PanelSettings = {
   notifyEvents: { started: false, stopped: false, crash: true, backupOk: false, backupFailed: true, disk: true },
   diskAlertPercent: 90,
   curseforgeApiKey: "",
+  smtpHost: "",
+  smtpPort: 465,
+  smtpUser: "",
+  smtpPass: "",
+  smtpFrom: "",
+  panelUrl: "",
 };
 
 export function getSettings(): PanelSettings {
@@ -56,8 +71,13 @@ export function updateSettings(patch: Partial<Omit<PanelSettings, "notifyEvents"
   return next;
 }
 
+/** Password reset by email works only when the panel can both send mail and build a link. */
+export function mailConfigured(s: PanelSettings = getSettings()): boolean {
+  return Boolean(s.smtpHost && (s.smtpFrom || s.smtpUser) && s.panelUrl);
+}
+
 /** Settings safe to expose to any visitor (login page needs name/colour/registration flag). */
-export function publicSettings(): Pick<PanelSettings, "registrationEnabled" | "accentColor" | "panelName"> {
+export function publicSettings(): Pick<PanelSettings, "registrationEnabled" | "accentColor" | "panelName"> & { passwordReset: boolean } {
   const s = getSettings();
-  return { registrationEnabled: s.registrationEnabled, accentColor: s.accentColor, panelName: s.panelName };
+  return { registrationEnabled: s.registrationEnabled, accentColor: s.accentColor, panelName: s.panelName, passwordReset: mailConfigured(s) };
 }

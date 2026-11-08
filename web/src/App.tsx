@@ -2,9 +2,11 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ChannelPrompt } from "./components/ChannelPrompt";
+import { EmailPrompt } from "./components/EmailPrompt";
 import { LogoLoader } from "./components/LogoLoader";
 import { useAuth } from "./hooks/auth";
 import { LoginPage, RegisterPage } from "./pages/Login";
+import { ConfirmEmailPage, ForgotPage, ResetPasswordPage } from "./pages/Recovery";
 import { ServersPage } from "./pages/Servers";
 
 const CreateServerPage = lazy(() => import("./pages/CreateServer"));
@@ -40,9 +42,13 @@ export function App() {
   return (
     <Suspense fallback={<LogoLoader />}>
       <ChannelPrompt />
+      <EmailPrompt />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot" element={<ForgotPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/confirm-email" element={<ConfirmEmailPage />} />
         <Route
           element={
             <RequireAuth>
