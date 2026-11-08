@@ -20,6 +20,7 @@ import { adminRoutes } from "./routes/admin.js";
 import { fileRoutes } from "./routes/files.js";
 import { iconRoutes } from "./routes/icon.js";
 import { modlistRoutes } from "./routes/modlist.js";
+import { mrpackRoutes } from "./routes/mrpack.js";
 import { serverConfigRoutes } from "./routes/serverConfig.js";
 import { serverExtraRoutes } from "./routes/serverExtras.js";
 import { serverRoutes } from "./routes/servers.js";
@@ -93,6 +94,7 @@ async function main(): Promise<void> {
   await app.register(fileRoutes);
   await app.register(iconRoutes);
   await app.register(modlistRoutes);
+  await app.register(mrpackRoutes);
   await app.register(serverExtraRoutes);
   await app.register(adminRoutes);
   await app.register(wsRoutes);

@@ -102,3 +102,29 @@ export interface PublicSettings {
   accentColor: string;
   panelName: string;
 }
+
+/** A .mrpack uploaded to the panel and inspected (see server/src/plugins/mrpack.ts). */
+export interface PackInfo {
+  id: string;
+  name: string;
+  version: string;
+  summary: string;
+  core: string;
+  mcVersion: string;
+  build: string | null;
+  java: number;
+  serverFiles: number;
+  clientOnlyFiles: number;
+  downloadMb: number;
+  overrideFiles: number;
+}
+
+export interface PackJob {
+  state: "running" | "done" | "failed";
+  pack: string;
+  startedAt: number;
+  done: number;
+  total: number;
+  log: string[];
+  error: string | null;
+}

@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PageHeader, useCrumbs } from "@/components/AppShell";
+import { coreName, PackPicker, PackSummary } from "@/components/ModpackPicker";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Field, Input, Select } from "@/components/ui/primitives";
 import { Switch } from "@/components/ui/overlays";
 import { useAuth } from "@/hooks/auth";
 import { errorText, get, post } from "@/lib/api";
 import { formatMb } from "@/lib/format";
-import type { CoreInfo, Server, VersionEntry } from "@/lib/types";
+import type { CoreInfo, PackInfo, Server, VersionEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STEPS = ["Ядро", "Версия", "Ресурсы", "Готово"] as const;
@@ -64,6 +65,7 @@ export default function CreateServerPage() {
   const [javaTouched, setJavaTouched] = useState(false);
   const [port, setPort] = useState("");
   const [eula, setEula] = useState(false);
+  const [pack, setPack] = useState<PackInfo | null>(null);
 
   const cores = useQuery({ queryKey: ["cores"], queryFn: () => get<{ cores: CoreInfo[]; java: number[]; hostRamMb?: number }>("/api/cores"), staleTime: Infinity });
   const versions = useQuery({
@@ -96,8 +98,8 @@ export default function CreateServerPage() {
   const isAdmin = user?.role === "admin";
 
   const create = useMutation({
-    mutationFn: () =>
-      post<{ server: Server }>("/api/servers", {
+    mutationFn: async () => {
+      const res = await post<{ server: Server }>("/api/servers", {
         name: name.trim() || `${coreInfo?.name ?? core} ${version?.id}`,
         core,
         mcVersion: version!.id,
@@ -108,14 +110,41 @@ export default function CreateServerPage() {
         diskMb,
         port: port ? Number(port) : undefined,
         acceptEula: eula,
-      }),
+      });
+      if (pack) {
+        try {
+          await post(`/api/servers/${res.server.id}/mrpack`, { packId: pack.id, backupFirst: false, clearMods: true });
+        } catch (err) {
+          toast.error(`Сервер создан, но сборку поставить не удалось: ${errorText(err)}`);
+        }
+      }
+      return res;
+    },
     onSuccess: ({ server }) => {
       void qc.invalidateQueries({ queryKey: ["servers"] });
-      toast.success("Сервер создан, идёт установка");
-      navigate(`/servers/${server.id}`);
+      toast.success(pack ? "Сервер создан: ставлю ядро, потом сборку" : "Сервер создан, идёт установка");
+      navigate(pack ? `/servers/${server.id}/addons` : `/servers/${server.id}`);
     },
     onError: (err) => toast.error(errorText(err)),
   });
+
+  const pickPack = (p: PackInfo) => {
+    setPack(p);
+    setCore(p.core);
+    setVersion({ id: p.mcVersion, build: p.build ?? undefined, stable: true } as VersionEntry);
+    setJava(p.java);
+    setJavaTouched(true);
+    const wanted = 8192;
+    setRamMb(isAdmin ? wanted : Math.min(wanted, RAM_PRESETS.filter((r) => r <= (user?.maxRamMb ?? 0)).pop() ?? ramMb));
+    if (isAdmin) setDiskMb(Math.max(diskMb, 20480));
+    if (!name) setName(p.name.slice(0, 48));
+    setStep(2);
+  };
+  const clearPack = () => {
+    setPack(null);
+    setVersion(null);
+    setJavaTouched(false);
+  };
 
   const canNext = step === 0 ? Boolean(core) : step === 1 ? Boolean(version) : step === 2 ? Boolean(java) : eula;
 
@@ -125,6 +154,16 @@ export default function CreateServerPage() {
       <Stepper step={step} />
 
       {step === 0 && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Из готовой сборки (.mrpack)</CardTitle>
+            <CardDescription>Ядро, версия и Java подставятся сами, серверные моды и настройки поставятся после создания. Или выберите ядро ниже.</CardDescription>
+          </CardHeader>
+          <CardContent>{pack ? <PackSummary pack={pack} onClear={clearPack} /> : <PackPicker onPicked={pickPack} />}</CardContent>
+        </Card>
+      )}
+
+      {step === 0 && !pack && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {cores.data?.cores.map((c) => (
             <button
@@ -223,7 +262,11 @@ export default function CreateServerPage() {
                   </Button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">Ванильному серверу на 5–10 игроков хватит 2 ГБ, сборке модов нужно 4–8 ГБ.</p>
+              <p className="text-xs text-muted-foreground">
+                {pack
+                  ? `В сборке «${pack.name}» ${pack.serverFiles} файлов для сервера: дайте ей 6–10 ГБ, иначе сервер может падать при входе игроков.`
+                  : "Ванильному серверу на 5–10 игроков хватит 2 ГБ, сборке модов нужно 4–8 ГБ."}
+              </p>
               {cores.data?.hostRamMb !== undefined && ramMb > cores.data.hostRamMb - 1024 && (
                 <p className="rounded-lg bg-warning/10 p-3 text-xs text-warning">
                   На этом VPS всего {formatMb(cores.data.hostRamMb)} памяти. Оставьте хотя бы 1 ГБ запаса для системы и панели, иначе сервер будет «убит» при запуске. Выберите меньше.
@@ -291,7 +334,8 @@ export default function CreateServerPage() {
             </Field>
             <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/60 p-4 text-sm sm:grid-cols-3">
               {[
-                ["Ядро", coreInfo?.name],
+                ...(pack ? [["Сборка", `${pack.name} ${pack.version}`]] : []),
+                ["Ядро", coreInfo?.name ?? coreName(core)],
                 ["Версия", `${version?.id}${version?.build ? ` (${version.build})` : ""}`],
                 ["Java", java],
                 ["Память", formatMb(ramMb)],
@@ -319,11 +363,11 @@ export default function CreateServerPage() {
       )}
 
       <div className="mt-6 flex justify-between gap-2">
-        <Button variant="outline" onClick={() => (step === 0 ? navigate("/") : setStep(step - 1))}>
+        <Button variant="outline" onClick={() => (step === 0 ? navigate("/") : setStep(pack && step === 2 ? 0 : step - 1))}>
           <ChevronLeft /> {step === 0 ? "Отмена" : "Назад"}
         </Button>
         {step < 3 ? (
-          <Button disabled={!canNext} onClick={() => setStep(step + 1)}>
+          <Button disabled={!canNext} onClick={() => setStep(pack && step === 0 ? 2 : step + 1)}>
             Далее <ChevronRight />
           </Button>
         ) : (

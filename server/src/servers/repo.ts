@@ -86,7 +86,8 @@ export function insertServer(row: Omit<ServerRow, "created_at">): ServerRow {
 type Patchable = Omit<ServerRow, "id" | "created_at" | "owner_id" | "rcon_password"> & { owner_id: number };
 
 export function updateServer(id: string, patch: Partial<Patchable>): ServerRow {
-  const keys = Object.keys(patch) as (keyof Patchable)[];
+  // Optional fields arrive as explicit undefined (e.g. a PATCH that only changes RAM): skip them.
+  const keys = (Object.keys(patch) as (keyof Patchable)[]).filter((k) => patch[k] !== undefined);
   if (keys.length === 0) return getServer(id);
   const sets = keys.map((k) => `${k} = ?`).join(", ");
   const values = keys.map((k) => patch[k] as string | number | null);
