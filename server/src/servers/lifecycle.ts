@@ -1,4 +1,5 @@
 import { mkdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import { config } from "../config.js";
 import { installCore, removeCoreArtifacts } from "../cores/install.js";
 import type { Core } from "../cores/types.js";
@@ -121,6 +122,9 @@ export async function deleteServer(id: string): Promise<void> {
   deleteServerRow(id);
   await rm(dataDirOf(id), { recursive: true, force: true });
   await rm(backupDirOf(id), { recursive: true, force: true });
+  // Files prepared for players (mods-by-list zip, the installed .mrpack) live outside the server folder.
+  const packs = join(config.SERVERS_DIR, "..", "cache", "clientpacks");
+  await Promise.all([".zip", ".mrpack"].map((ext) => rm(join(packs, `${id}${ext}`), { force: true })));
 }
 
 export function assertWithinOwnerLimits(owner: { id: number; role: string; max_servers: number; max_ram_mb: number }, usage: { servers: number; ramMb: number }, extraRam: number, newServer: boolean): void {
