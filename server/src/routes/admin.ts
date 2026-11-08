@@ -13,7 +13,8 @@ import { config } from "../config.js";
 import { run } from "../db/index.js";
 import { docker } from "../docker/client.js";
 import { audit, listAudit } from "../lib/audit.js";
-import { badRequest } from "../lib/errors.js";
+import { badRequest, HttpError } from "../lib/errors.js";
+import { sendMail, testMail } from "../lib/mailer.js";
 import { probe } from "../lib/http.js";
 import { sendTestNotification } from "../lib/notify.js";
 import { getSettings, updateSettings } from "../lib/settings.js";
@@ -91,7 +92,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       }),
       req.body,
     );
-    const user = await createUser({ username: body.username, email: body.email || null, password: body.password, role: body.role });
+    const user = await createUser({ username: body.username, email: body.email || null, password: body.password, role: body.role, emailVerified: true });
     updateUser(user.id, { maxServers: body.maxServers, maxRamMb: body.maxRamMb });
     audit({ userId: currentUser(req).id, action: "admin.user_create", details: { username: user.username, role: body.role }, ip: req.ip });
     return { user: toPublic(getUser(user.id)) };
@@ -170,6 +171,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         telegramBotToken: s.telegramBotToken ? "••••••" : "",
         telegramRelayKey: s.telegramRelayKey ? "••••••" : "",
         curseforgeApiKey: s.curseforgeApiKey ? "••••••" : "",
+        smtpPass: s.smtpPass ? "••••••" : "",
       },
     };
   });
@@ -198,6 +200,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
           .optional(),
         diskAlertPercent: z.number().int().min(50).max(99).optional(),
         curseforgeApiKey: z.string().trim().max(200).regex(/^[^\s]*$|^••••••$/, "Ключ не должен содержать пробелов").optional(),
+        smtpHost: z.string().trim().max(200).regex(/^$|^[a-zA-Z0-9.-]+$/, "Адрес SMTP-сервера, например smtp.yandex.ru").optional(),
+        smtpPort: z.coerce.number().int().min(1).max(65535).optional(),
+        smtpUser: z.string().trim().max(200).optional(),
+        smtpPass: z.string().max(200).optional(),
+        smtpFrom: z.string().trim().max(200).regex(/^$|^[^<>\r\n]*<?[^\s@<>]+@[^\s@<>]+>?$/, "Адрес отправителя, например «MC Panel <panel@yandex.ru>»").optional(),
+        panelUrl: z.string().trim().max(200).regex(/^$|^https?:\/\/[^\s/]+(\/[^\s]*)?$/, "Адрес панели должен начинаться с https://").optional(),
       }),
       req.body,
     );
@@ -205,12 +213,29 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     if (body.telegramBotToken === "••••••") delete body.telegramBotToken;
     if (body.telegramRelayKey === "••••••") delete body.telegramRelayKey;
     if (body.curseforgeApiKey === "••••••") delete body.curseforgeApiKey;
+    if (body.smtpPass === "••••••") delete body.smtpPass;
+    if (body.panelUrl) body.panelUrl = body.panelUrl.replace(/\/+$/, "");
     updateSettings(body);
     audit({ userId: currentUser(req).id, action: "admin.settings", details: Object.keys(body), ip: req.ip });
     return { ok: true };
   });
 
   app.post("/api/admin/settings/test-notification", { preHandler: requireAdmin }, async () => sendTestNotification());
+
+  app.post("/api/admin/settings/test-email", { preHandler: requireAdmin, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (req) => {
+    const { to } = parse(z.object({ to: z.string().trim().max(200).email("Некорректный адрес").optional().or(z.literal("")) }), req.body ?? {});
+    const admin = currentUser(req);
+    const target = to || (admin.email_verified ? admin.email : null);
+    if (!target) throw badRequest("Укажите, куда отправить тестовое письмо");
+    const s = getSettings();
+    try {
+      await sendMail({ to: target, ...testMail({ panelName: s.panelName, panelUrl: s.panelUrl }) });
+    } catch (err) {
+      throw new HttpError(502, (err as Error).message);
+    }
+    audit({ userId: admin.id, action: "admin.test_email", details: { to: target }, ip: req.ip });
+    return { ok: true, to: target };
+  });
 
   // Reachability of the upstreams the panel downloads from, one raw attempt each.
   const NET_TARGETS = [

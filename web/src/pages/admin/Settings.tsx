@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Download, KeyRound, Palette, Save, Send } from "lucide-react";
+import { Bell, Download, KeyRound, Mail, Palette, Save, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, useCrumbs } from "@/components/AppShell";
@@ -23,7 +23,19 @@ interface Settings {
   notifyEvents: Record<NotifyEvent, boolean>;
   diskAlertPercent: number;
   curseforgeApiKey: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+  smtpFrom: string;
+  panelUrl: string;
 }
+
+const SMTP_PRESETS = [
+  { name: "Яндекс", host: "smtp.yandex.ru", port: 465, help: "id.yandex.ru → Безопасность → Пароли приложений → Почта" },
+  { name: "Mail.ru", host: "smtp.mail.ru", port: 465, help: "Настройки почты → Безопасность → Пароли для внешних приложений" },
+  { name: "Gmail", host: "smtp.gmail.com", port: 465, help: "myaccount.google.com → Безопасность → Пароли приложений (нужна 2FA)" },
+];
 
 type NotifyEvent = "started" | "stopped" | "crash" | "backupOk" | "backupFailed" | "disk";
 
@@ -53,6 +65,8 @@ export default function AdminSettings() {
   const query = useQuery({ queryKey: ["admin-settings"], queryFn: () => get<{ settings: Settings }>("/api/admin/settings") });
   const [form, setForm] = useState<Settings | null>(null);
   const [testing, setTesting] = useState(false);
+  const [mailTo, setMailTo] = useState("");
+  const [mailTesting, setMailTesting] = useState(false);
   const [updating, setUpdating] = useState(false);
   const updateCheck = useQuery({ queryKey: ["update-check"], queryFn: () => get<UpdateInfo>("/api/admin/update/check"), staleTime: 60 * 60_000 });
   const updateLog = useQuery({ queryKey: ["update-log"], queryFn: () => get<{ log: string }>("/api/admin/update/status"), refetchInterval: updating ? 3000 : false });
@@ -85,6 +99,19 @@ export default function AdminSettings() {
       toast.error(errorText(err));
     } finally {
       setTesting(false);
+    }
+  };
+
+  const testEmail = async () => {
+    setMailTesting(true);
+    try {
+      await save();
+      const res = await post<{ to: string }>("/api/admin/settings/test-email", { to: mailTo });
+      toast.success(`Тестовое письмо отправлено на ${res.to}`);
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setMailTesting(false);
     }
   };
 
@@ -203,6 +230,63 @@ export default function AdminSettings() {
             <Button variant="outline" onClick={() => void test()} loading={testing}>
               <Send /> Сохранить и отправить тест
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="size-4" /> Почта
+            </CardTitle>
+            <CardDescription>
+              Для «Забыли пароль?» и подтверждения почты. Заведите отдельный ящик для панели и создайте в нём пароль приложения: обычный пароль от почты SMTP не примет. Пока поля пустые, восстановление по
+              почте выключено, и никто не увидит предложения добавить почту.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {SMTP_PRESETS.map((p) => (
+                <Button key={p.name} type="button" size="sm" variant={form.smtpHost === p.host ? "default" : "outline"} onClick={() => setForm({ ...form, smtpHost: p.host, smtpPort: p.port })}>
+                  {p.name}
+                </Button>
+              ))}
+            </div>
+            {SMTP_PRESETS.find((p) => p.host === form.smtpHost) && (
+              <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">Пароль приложения: {SMTP_PRESETS.find((p) => p.host === form.smtpHost)!.help}</p>
+            )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px]">
+              <Field label="SMTP-сервер">
+                <Input value={form.smtpHost} onChange={(e) => set("smtpHost", e.target.value.trim())} placeholder="smtp.yandex.ru" />
+              </Field>
+              <Field label="Порт" hint="465 или 587">
+                <Input type="number" value={form.smtpPort} onChange={(e) => set("smtpPort", Number(e.target.value))} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Логин (адрес ящика)">
+                <Input value={form.smtpUser} onChange={(e) => set("smtpUser", e.target.value)} placeholder="mcpanel.noreply@yandex.ru" autoComplete="off" />
+              </Field>
+              <Field label="Пароль приложения" hint="Сохранённый пароль показан звёздочками">
+                <Input type="password" value={form.smtpPass} onChange={(e) => set("smtpPass", e.target.value)} autoComplete="new-password" />
+              </Field>
+            </div>
+            <Field label="От кого" hint="Как письмо будет подписано. Адрес должен совпадать с ящиком выше.">
+              <Input value={form.smtpFrom} onChange={(e) => set("smtpFrom", e.target.value)} placeholder={`${form.panelName || "MC Panel"} <${form.smtpUser || "mcpanel.noreply@yandex.ru"}>`} />
+            </Field>
+            <Field label="Адрес панели" hint="Из него собираются ссылки в письмах">
+              <div className="flex gap-2">
+                <Input value={form.panelUrl} onChange={(e) => set("panelUrl", e.target.value.trim())} placeholder="https://panel.example.ru" />
+                <Button type="button" variant="outline" onClick={() => set("panelUrl", window.location.origin)}>
+                  Этот адрес
+                </Button>
+              </div>
+            </Field>
+            <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row">
+              <Input value={mailTo} onChange={(e) => setMailTo(e.target.value)} placeholder="Куда отправить тест (по умолчанию ваша почта)" type="email" />
+              <Button variant="outline" onClick={() => void testEmail()} loading={mailTesting} disabled={!form.smtpHost}>
+                <Send /> Сохранить и отправить тест
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/auth";
 import { del, errorText, get, post } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import type { AuditEntry, User } from "@/lib/types";
+import { EmailCard } from "./EmailCard";
 
 function PasswordCard() {
   const [form, setForm] = useState({ current: "", next: "", repeat: "" });
@@ -268,7 +269,10 @@ export default function AccountPage() {
     <>
       <PageHeader title={user.username} description={`${user.role === "admin" ? "Администратор" : "Пользователь"} · лимит: ${user.maxServers} серв., ${Math.round(user.maxRamMb / 1024)} ГБ RAM`} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PasswordCard />
+        <div className="space-y-6">
+          <PasswordCard />
+          <EmailCard user={user} />
+        </div>
         <div className="space-y-6">
           <TwoFactorCard user={user} />
           <SessionsCard />

@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/auth";
 import { errorText, post } from "@/lib/api";
 import type { User } from "@/lib/types";
 
-function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   const { settings } = useAuth();
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
@@ -70,7 +70,19 @@ export function LoginPage() {
             <Field label="Имя пользователя" htmlFor="username">
               <Input id="username" autoComplete="username" autoFocus value={username} onChange={(e) => setUsername(e.target.value)} required />
             </Field>
-            <Field label="Пароль" htmlFor="password">
+            <Field
+              label={
+                <span className="flex w-full items-center justify-between gap-2">
+                  Пароль
+                  {settings?.passwordReset && (
+                    <Link to="/forgot" className="text-xs font-normal text-primary hover:underline">
+                      Забыли пароль?
+                    </Link>
+                  )}
+                </span>
+              }
+              htmlFor="password"
+            >
               <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </Field>
           </>

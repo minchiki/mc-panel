@@ -4,6 +4,10 @@ export interface User {
   id: number;
   username: string;
   email: string | null;
+  /** The address is confirmed and can receive password reset links. */
+  emailVerified: boolean;
+  /** Address waiting for its confirmation link to be opened. */
+  pendingEmail?: string | null;
   role: Role;
   totpEnabled: boolean;
   maxServers: number;
@@ -101,6 +105,8 @@ export interface PublicSettings {
   registrationEnabled: boolean;
   accentColor: string;
   panelName: string;
+  /** Mail is configured, so "Forgot password" and email confirmation work. */
+  passwordReset: boolean;
 }
 
 /** A .mrpack uploaded to the panel and inspected (see server/src/plugins/mrpack.ts). */
