@@ -11,6 +11,7 @@ import { errorText, get, post, upload } from "@/lib/api";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ModListBuilder } from "./ModListBuilder";
+import { ModpackCard } from "./ModpackCard";
 import { useServerContext } from "./ServerLayout";
 
 type Source = "modrinth" | "curseforge" | "hangar" | "spiget";
@@ -114,18 +115,23 @@ export default function AddonsTab() {
   if (info.isLoading) return <Spinner />;
   if (!info.data) return null;
 
+  const packs = server.core !== "velocity" && server.core !== "bungeecord";
   if (info.data.sources.length === 0) {
     return (
-      <EmptyState
-        icon={<Puzzle />}
-        title="Ванильный сервер не поддерживает плагины"
-        description="Чтобы ставить плагины, смените ядро на Paper или Purpur в «Настройки» → «Ядро и версия». Мир сохранится."
-      />
+      <div className="space-y-6">
+        <EmptyState
+          icon={<Puzzle />}
+          title="Ванильный сервер не поддерживает плагины"
+          description="Чтобы ставить плагины, смените ядро на Paper или Purpur в «Настройки» → «Ядро и версия». Мир сохранится. Или поставьте готовую сборку модов ниже."
+        />
+        {packs && <ModpackCard server={server} />}
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+    {packs && <ModpackCard server={server} />}
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <Card className="order-2 xl:order-1">
         <CardHeader>

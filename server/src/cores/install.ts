@@ -39,7 +39,8 @@ async function fabric(ctx: InstallContext): Promise<InstallResult> {
     fetchJson<{ loader: { version: string; stable: boolean } }[]>(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(ctx.mcVersion)}`),
     fetchJson<{ version: string; stable: boolean }[]>("https://meta.fabricmc.net/v2/versions/installer"),
   ]);
-  const loader = loaders.find((l) => l.loader.stable)?.loader.version ?? loaders[0]?.loader.version;
+  // A pinned loader (e.g. from a modpack) wins; otherwise the newest stable one.
+  const loader = (ctx.build && loaders.some((l) => l.loader.version === ctx.build) ? ctx.build : undefined) ?? loaders.find((l) => l.loader.stable)?.loader.version ?? loaders[0]?.loader.version;
   const installer = installers.find((i) => i.stable)?.version ?? installers[0]?.version;
   if (!loader || !installer) throw new Error(`Fabric не поддерживает ${ctx.mcVersion}`);
   await fetchTo(
