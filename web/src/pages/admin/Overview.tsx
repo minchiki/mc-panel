@@ -69,7 +69,7 @@ export default function AdminOverview() {
                 <th className="py-2 font-medium">Сервер</th>
                 <th className="py-2 font-medium">Статус</th>
                 <th className="hidden py-2 font-medium sm:table-cell">Ядро</th>
-                <th className="py-2 font-medium">RAM</th>
+                <th className="py-2 font-medium">Память</th>
                 <th className="hidden py-2 font-medium md:table-cell">Порт</th>
                 <th className="hidden py-2 font-medium md:table-cell">Игроки</th>
               </tr>

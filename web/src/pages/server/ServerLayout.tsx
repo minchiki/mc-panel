@@ -113,7 +113,7 @@ export default function ServerLayout() {
           <PowerButtons server={server} />
         </div>
         <div className="grid grid-cols-2 gap-3 border-t bg-muted/20 p-4 sm:grid-cols-4 sm:px-6">
-          <Stat icon={<Cpu />} label="CPU" value={server.stats ? `${Math.round(cpuPct)}%` : "—"} pct={cpuPct} />
+          <Stat icon={<Cpu />} label="Процессор" value={server.stats ? `${Math.round(cpuPct)}%` : "—"} pct={cpuPct} />
           <Stat
             icon={<MemoryStick />}
             label="Память"

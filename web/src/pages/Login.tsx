@@ -196,6 +196,10 @@ export function RegisterPage() {
             и принимаю{" "}
             <Link to="/privacy" target="_blank" className="text-primary hover:underline">
               политику
+            </Link>{" "}
+            и{" "}
+            <Link to="/terms" target="_blank" className="text-primary hover:underline">
+              пользовательское соглашение
             </Link>
             . Если мне нет 14 лет, родители разрешили.
           </span>

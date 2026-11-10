@@ -19,6 +19,7 @@ import { HttpError } from "./lib/errors.js";
 import { publicSettings } from "./lib/settings.js";
 import { adminRoutes } from "./routes/admin.js";
 import { aiRoutes } from "./routes/ai.js";
+import { privacyRoutes } from "./routes/privacy.js";
 import { fileRoutes } from "./routes/files.js";
 import { iconRoutes } from "./routes/icon.js";
 import { modlistRoutes } from "./routes/modlist.js";
@@ -92,6 +93,7 @@ async function main(): Promise<void> {
 
   await app.register(authRoutes);
   await app.register(aiRoutes);
+  await app.register(privacyRoutes);
   await app.register(serverRoutes);
   await app.register(serverConfigRoutes);
   await app.register(fileRoutes);
