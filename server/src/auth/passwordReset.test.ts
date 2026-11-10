@@ -120,3 +120,23 @@ describe("mail templates", () => {
     expect(m.html).toContain("https://panel.example/apple-touch-icon.png");
   });
 });
+
+describe("152-FZ housekeeping", () => {
+  it("records the consent edition and prunes year-old audit entries and spent tokens", async () => {
+    const { recordConsent } = await import("./users.js");
+    const { audit, pruneOldRecords, AUDIT_RETENTION_MS } = await import("../lib/audit.js");
+    const { one } = await import("../db/index.js");
+    recordConsent(uid, "2026-11-10", 1234);
+    expect(one<{ consent_at: number; consent_version: string }>("SELECT consent_at, consent_version FROM users WHERE id = ?", uid)).toEqual({ consent_at: 1234, consent_version: "2026-11-10" });
+
+    audit({ userId: uid, action: "test.old" });
+    run("UPDATE audit_log SET created_at = ? WHERE action = 'test.old'", Date.now() - AUDIT_RETENTION_MS - 1000);
+    audit({ userId: uid, action: "test.new" });
+    const stale = createReset(uid, "1.1.1.1", Date.now() - 3 * 24 * 3600_000);
+    pruneOldRecords();
+    const actions = (await import("../db/index.js")).all<{ action: string }>("SELECT action FROM audit_log WHERE action LIKE 'test.%'").map((r) => r.action);
+    expect(actions).toEqual(["test.new"]);
+    expect(checkReset(stale)).toBeNull();
+    expect(one("SELECT 1 AS x FROM password_resets WHERE expires_at < ?", Date.now() - 24 * 3600_000)).toBeUndefined();
+  });
+});

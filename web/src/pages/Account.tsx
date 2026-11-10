@@ -14,6 +14,7 @@ import { del, errorText, get, post } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import type { AuditEntry, User } from "@/lib/types";
 import { EmailCard } from "./EmailCard";
+import { LegalLinks } from "./Legal";
 
 function PasswordCard() {
   const [form, setForm] = useState({ current: "", next: "", repeat: "" });
@@ -289,6 +290,7 @@ export default function AccountPage() {
           </CardContent>
         </Card>
       </div>
+      <LegalLinks className="mt-8" />
     </>
   );
 }

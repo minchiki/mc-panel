@@ -4,10 +4,25 @@ updates:
     directory: /server
     schedule:
       interval: weekly
+    ignore:
+      # TypeScript 7 (native compiler) needs its own migration; @types/node follows the Node major the panel runs on (22).
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /web
     schedule:
       interval: weekly
+    ignore:
+      # plugin-react 6 requires Vite 8, tailwind-merge 3 requires Tailwind 4: upgrade together with them.
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: tailwind-merge
+        update-types: ["version-update:semver-major"]
+      # monaco-editor 0.53+ ships every language worker in one entry and triples the bundle (5.5 MB -> 16 MB).
+      - dependency-name: monaco-editor
+        versions: [">=0.53.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -173,4 +173,9 @@ export const migrations: string[] = [
     expires_at INTEGER NOT NULL
   );
   `,
+  `
+  -- 152-FZ: when and which edition of the personal data consent a user accepted at sign-up.
+  ALTER TABLE users ADD COLUMN consent_at INTEGER;
+  ALTER TABLE users ADD COLUMN consent_version TEXT;
+  `,
 ];

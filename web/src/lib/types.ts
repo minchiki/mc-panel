@@ -107,6 +107,9 @@ export interface PublicSettings {
   panelName: string;
   /** Mail is configured, so "Forgot password" and email confirmation work. */
   passwordReset: boolean;
+  /** Personal data operator for the privacy policy (empty: "the panel administrator"). */
+  operatorName?: string;
+  operatorContact?: string;
 }
 
 /** A .mrpack uploaded to the panel and inspected (see server/src/plugins/mrpack.ts). */

@@ -148,3 +148,8 @@ export function deleteUser(id: number): void {
   if (one("SELECT 1 FROM servers WHERE owner_id = ?", id)) throw conflict("Сначала удалите или передайте серверы пользователя");
   run("DELETE FROM users WHERE id = ?", id);
 }
+
+/** Stores when and which edition of the personal data consent the user accepted. */
+export function recordConsent(userId: number, version: string, now = Date.now()): void {
+  run("UPDATE users SET consent_at = ?, consent_version = ? WHERE id = ?", now, version, userId);
+}

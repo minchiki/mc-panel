@@ -39,6 +39,7 @@ import {
   setPassword,
   setVerifiedEmail,
   toPublic,
+  recordConsent,
   verifyPassword,
 } from "./users.js";
 
@@ -82,10 +83,18 @@ function setSessionCookie(req: FastifyRequest, reply: FastifyReply, token: strin
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post("/api/auth/register", { config: loginLimit }, async (req, reply) => {
     const body = parse(
-      z.object({ username: usernameSchema, email: z.string().email("Некорректный email").optional().or(z.literal("")), password: passwordSchema }),
+      z.object({
+        username: usernameSchema,
+        email: z.string().email("Некорректный email").optional().or(z.literal("")),
+        password: passwordSchema,
+        consent: z.boolean().optional(),
+        consentVersion: z.string().max(20).optional(),
+      }),
       req.body,
     );
     if (!getSettings().registrationEnabled) throw new HttpError(403, "Регистрация отключена администратором");
+    // 152-FZ: a separate, explicit consent is required before any personal data is stored.
+    if (body.consent !== true) throw new HttpError(400, "Чтобы зарегистрироваться, отметьте согласие на обработку персональных данных");
     // An address typed at sign-up is used for resets only after its owner opens the confirmation link.
     const confirmByMail = Boolean(body.email) && mailConfigured();
     const user = await createUser({ username: body.username, email: confirmByMail ? null : body.email || null, password: body.password, role: "user" });
@@ -93,7 +102,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       const token = createEmailVerification(user.id, body.email.toLowerCase());
       mailLater(req, body.email, confirmEmailMail(brand(), { username: user.username, link: confirmLink(getSettings().panelUrl, token), hours: VERIFY_TTL_MS / 3600_000 }));
     }
-    audit({ userId: user.id, action: "auth.register", ip: req.ip });
+    recordConsent(user.id, body.consentVersion ?? "unknown");
+    audit({ userId: user.id, action: "auth.register", details: { consent: body.consentVersion ?? "unknown" }, ip: req.ip });
     setSessionCookie(req, reply, createSession(user.id, req.ip, req.headers["user-agent"] ?? ""));
     return { user: toPublic(user) };
   });

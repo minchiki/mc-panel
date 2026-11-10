@@ -6,6 +6,7 @@ import { EmailPrompt } from "./components/EmailPrompt";
 import { LogoLoader } from "./components/LogoLoader";
 import { useAuth } from "./hooks/auth";
 import { LoginPage, RegisterPage } from "./pages/Login";
+import { ConsentPage, PrivacyPage } from "./pages/Legal";
 import { ConfirmEmailPage, ForgotPage, ResetPasswordPage } from "./pages/Recovery";
 import { ServersPage } from "./pages/Servers";
 
@@ -49,6 +50,8 @@ export function App() {
         <Route path="/forgot" element={<ForgotPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/confirm-email" element={<ConfirmEmailPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/consent" element={<ConsentPage />} />
         <Route
           element={
             <RequireAuth>
