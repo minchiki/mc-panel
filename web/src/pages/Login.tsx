@@ -8,6 +8,7 @@ import { Card, Field, Input } from "@/components/ui/primitives";
 import { useAuth } from "@/hooks/auth";
 import { errorText, post } from "@/lib/api";
 import type { User } from "@/lib/types";
+import { CONSENT_VERSION, LegalLinks } from "./Legal";
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   const { settings } = useAuth();
@@ -24,6 +25,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
         </div>
         <Card className="p-6">{children}</Card>
         <p className="mt-6 text-center text-xs text-muted-foreground">{settings?.panelName ?? "MC Panel"}</p>
+        <LegalLinks className="mt-2" />
       </div>
     </div>
   );
@@ -128,6 +130,7 @@ export function RegisterPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [form, setForm] = useState({ username: "", email: "", password: "", password2: "" });
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -145,10 +148,17 @@ export function RegisterPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (form.password !== form.password2) return setError("Пароли не совпадают");
+    if (!consent) return setError("Отметьте согласие на обработку персональных данных");
     setError("");
     setLoading(true);
     try {
-      const res = await post<{ user: User }>("/api/auth/register", { username: form.username, email: form.email, password: form.password });
+      const res = await post<{ user: User }>("/api/auth/register", {
+        username: form.username,
+        email: form.email,
+        password: form.password,
+        consent,
+        consentVersion: CONSENT_VERSION,
+      });
       qc.setQueryData(["me"], res.user);
       navigate("/", { replace: true });
     } catch (err) {
@@ -175,6 +185,20 @@ export function RegisterPage() {
         <Field label="Повторите пароль" htmlFor="r-password2">
           <Input id="r-password2" type="password" autoComplete="new-password" value={form.password2} onChange={set("password2")} required />
         </Field>
+        <label className="flex items-start gap-2.5 text-sm leading-snug">
+          <input type="checkbox" className="mt-0.5 size-4 shrink-0 accent-[hsl(var(--primary))]" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />
+          <span className="text-muted-foreground">
+            Даю{" "}
+            <Link to="/consent" target="_blank" className="text-primary hover:underline">
+              согласие на обработку персональных данных
+            </Link>{" "}
+            и принимаю{" "}
+            <Link to="/privacy" target="_blank" className="text-primary hover:underline">
+              политику
+            </Link>
+            . Если мне нет 14 лет, родители разрешили.
+          </span>
+        </label>
         {error && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
         <Button type="submit" className="w-full" loading={loading}>
           Зарегистрироваться

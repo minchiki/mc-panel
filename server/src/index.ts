@@ -14,6 +14,7 @@ import { config } from "./config.js";
 import { openDb } from "./db/index.js";
 import { authRoutes } from "./auth/routes.js";
 import { purgeExpiredSessions } from "./auth/sessions.js";
+import { pruneOldRecords } from "./lib/audit.js";
 import { HttpError } from "./lib/errors.js";
 import { publicSettings } from "./lib/settings.js";
 import { adminRoutes } from "./routes/admin.js";
@@ -114,7 +115,11 @@ async function main(): Promise<void> {
   loadAllSchedules();
   startMetricsCollector();
   startPingSync();
-  setInterval(purgeExpiredSessions, 3600_000);
+  setInterval(() => {
+    purgeExpiredSessions();
+    pruneOldRecords();
+  }, 3600_000);
+  pruneOldRecords();
   reconcileAll().catch((err) => app.log.error(err, "reconcile failed"));
 
   for (const signal of ["SIGINT", "SIGTERM"] as const) {

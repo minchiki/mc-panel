@@ -24,6 +24,16 @@ export function audit(entry: { userId?: number | null; serverId?: string | null;
   );
 }
 
+/** Audit entries (they hold IP addresses) are kept for a year, as the privacy policy promises. */
+export const AUDIT_RETENTION_MS = 365 * 24 * 3600_000;
+
+/** Deletes old audit entries and spent password-reset / email-confirmation tokens. */
+export function pruneOldRecords(now = Date.now()): void {
+  run("DELETE FROM audit_log WHERE created_at < ?", now - AUDIT_RETENTION_MS);
+  run("DELETE FROM password_resets WHERE expires_at < ?", now - 24 * 3600_000);
+  run("DELETE FROM email_verifications WHERE expires_at < ?", now);
+}
+
 export function listAudit(filter: { userId?: number; serverId?: string; limit?: number; before?: number }): AuditEntry[] {
   const where: string[] = [];
   const params: (string | number)[] = [];

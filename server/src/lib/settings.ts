@@ -32,6 +32,10 @@ export interface PanelSettings {
   smtpFrom: string;
   /** Public address of the panel, used for links in emails (never taken from the request Host header). */
   panelUrl: string;
+  /** Personal data operator shown in the privacy policy and consent (152-FZ): a full name or organisation. */
+  operatorName: string;
+  /** Where to send personal data requests: an email or @telegram. */
+  operatorContact: string;
 }
 
 const DEFAULTS: PanelSettings = {
@@ -52,6 +56,8 @@ const DEFAULTS: PanelSettings = {
   smtpPass: "",
   smtpFrom: "",
   panelUrl: "",
+  operatorName: "",
+  operatorContact: "",
 };
 
 export function getSettings(): PanelSettings {
@@ -77,7 +83,14 @@ export function mailConfigured(s: PanelSettings = getSettings()): boolean {
 }
 
 /** Settings safe to expose to any visitor (login page needs name/colour/registration flag). */
-export function publicSettings(): Pick<PanelSettings, "registrationEnabled" | "accentColor" | "panelName"> & { passwordReset: boolean } {
+export function publicSettings(): Pick<PanelSettings, "registrationEnabled" | "accentColor" | "panelName" | "operatorName" | "operatorContact"> & { passwordReset: boolean } {
   const s = getSettings();
-  return { registrationEnabled: s.registrationEnabled, accentColor: s.accentColor, panelName: s.panelName, passwordReset: mailConfigured(s) };
+  return {
+    registrationEnabled: s.registrationEnabled,
+    accentColor: s.accentColor,
+    panelName: s.panelName,
+    passwordReset: mailConfigured(s),
+    operatorName: s.operatorName,
+    operatorContact: s.operatorContact,
+  };
 }

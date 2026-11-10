@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Download, KeyRound, Mail, Palette, Save, Send } from "lucide-react";
+import { Bell, Download, KeyRound, Mail, Palette, Save, Scale, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, useCrumbs } from "@/components/AppShell";
@@ -29,6 +29,8 @@ interface Settings {
   smtpPass: string;
   smtpFrom: string;
   panelUrl: string;
+  operatorName: string;
+  operatorContact: string;
 }
 
 const SMTP_PRESETS = [
@@ -287,6 +289,27 @@ export default function AdminSettings() {
                 <Send /> Сохранить и отправить тест
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="size-4" /> Персональные данные (152-ФЗ)
+            </CardTitle>
+            <CardDescription>
+              Панель сама показывает <a href="/privacy" target="_blank" className="text-primary underline">политику обработки данных</a> и отдельное{" "}
+              <a href="/consent" target="_blank" className="text-primary underline">согласие</a>, а при регистрации спрашивает галочку согласия. Впишите, кто оператор данных и куда писать с вопросами. По
+              закону данные россиян должны храниться в России, поэтому держите панель на российском VPS. Если собираете данные пользователей, подайте уведомление в Роскомнадзор на pd.rkn.gov.ru.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Оператор" hint="ФИО, ИП или название организации">
+              <Input value={form.operatorName ?? ""} onChange={(e) => set("operatorName", e.target.value)} placeholder="Иванов Иван Иванович" />
+            </Field>
+            <Field label="Контакт для запросов" hint="Почта или @ник в Telegram">
+              <Input value={form.operatorContact ?? ""} onChange={(e) => set("operatorContact", e.target.value)} placeholder="privacy@example.ru" />
+            </Field>
           </CardContent>
         </Card>
 

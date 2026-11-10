@@ -206,6 +206,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         smtpPass: z.string().max(200).optional(),
         smtpFrom: z.string().trim().max(200).regex(/^$|^[^<>\r\n]*<?[^\s@<>]+@[^\s@<>]+>?$/, "Адрес отправителя, например «MC Panel <panel@yandex.ru>»").optional(),
         panelUrl: z.string().trim().max(200).regex(/^$|^https?:\/\/[^\s/]+(\/[^\s]*)?$/, "Адрес панели должен начинаться с https://").optional(),
+        operatorName: z.string().trim().max(200).regex(/^[^<>\r\n]*$/, "Без угловых скобок и переносов строк").optional(),
+        operatorContact: z.string().trim().max(200).regex(/^[^<>\r\n]*$/, "Без угловых скобок и переносов строк").optional(),
       }),
       req.body,
     );
