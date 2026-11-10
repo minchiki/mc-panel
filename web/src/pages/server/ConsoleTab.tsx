@@ -1,5 +1,6 @@
 import Anser from "anser";
-import { ArrowDownToLine, ChevronRight, Download, Eraser, Pause, Play } from "lucide-react";
+import { ArrowDownToLine, ChevronRight, Download, Eraser, Pause, Play, Sparkles } from "lucide-react";
+import { useAi } from "@/components/AiAssistant";
 import { memo, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ function loadHistory(id: string): string[] {
 
 export default function ConsoleTab() {
   const server = useServerContext();
+  const ai = useAi();
   const [lines, setLines] = useState<string[]>([]);
   const [follow, setFollow] = useState(true);
   const [command, setCommand] = useState("");
@@ -131,6 +133,14 @@ export default function ConsoleTab() {
           {lines.length ? `${lines.length} строк` : "Здесь появится вывод сервера"}
         </p>
         <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="mr-1 gap-1.5"
+            onClick={() => ai.open("Посмотри консоль этого сервера: есть ли ошибки, почему он не запускается или падает, и как это исправить?")}
+          >
+            <Sparkles className="text-primary" /> Разобрать с ИИ
+          </Button>
           <Tooltip content={follow ? "Пауза автопрокрутки" : "Включить автопрокрутку"}>
             <Button variant="ghost" size="icon" onClick={() => setFollow(!follow)} aria-label="Автопрокрутка">
               {follow ? <Pause /> : <Play />}

@@ -36,6 +36,11 @@ export interface PanelSettings {
   operatorName: string;
   /** Where to send personal data requests: an email or @telegram. */
   operatorContact: string;
+  /** AI assistant: OpenRouter key, optional relay (for hosts where openrouter.ai is blocked) and model list. */
+  aiApiKey: string;
+  aiApiBase: string;
+  aiRelayKey: string;
+  aiModels: string;
 }
 
 const DEFAULTS: PanelSettings = {
@@ -58,6 +63,10 @@ const DEFAULTS: PanelSettings = {
   panelUrl: "",
   operatorName: "",
   operatorContact: "",
+  aiApiKey: "",
+  aiApiBase: "",
+  aiRelayKey: "",
+  aiModels: "",
 };
 
 export function getSettings(): PanelSettings {
@@ -83,7 +92,7 @@ export function mailConfigured(s: PanelSettings = getSettings()): boolean {
 }
 
 /** Settings safe to expose to any visitor (login page needs name/colour/registration flag). */
-export function publicSettings(): Pick<PanelSettings, "registrationEnabled" | "accentColor" | "panelName" | "operatorName" | "operatorContact"> & { passwordReset: boolean } {
+export function publicSettings(): Pick<PanelSettings, "registrationEnabled" | "accentColor" | "panelName" | "operatorName" | "operatorContact"> & { passwordReset: boolean; ai: boolean } {
   const s = getSettings();
   return {
     registrationEnabled: s.registrationEnabled,
@@ -92,5 +101,6 @@ export function publicSettings(): Pick<PanelSettings, "registrationEnabled" | "a
     passwordReset: mailConfigured(s),
     operatorName: s.operatorName,
     operatorContact: s.operatorContact,
+    ai: Boolean(s.aiApiKey),
   };
 }

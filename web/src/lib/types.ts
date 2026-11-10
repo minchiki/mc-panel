@@ -110,6 +110,8 @@ export interface PublicSettings {
   /** Personal data operator for the privacy policy (empty: "the panel administrator"). */
   operatorName?: string;
   operatorContact?: string;
+  /** An OpenRouter key is set, so the AI assistant works. */
+  ai?: boolean;
 }
 
 /** A .mrpack uploaded to the panel and inspected (see server/src/plugins/mrpack.ts). */
