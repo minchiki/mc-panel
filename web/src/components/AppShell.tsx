@@ -263,6 +263,22 @@ export function AppShell() {
   const location = useLocation();
   useLiveSync();
   useEffect(() => setMobileOpen(false), [location.pathname]);
+  // One listener drives the cursor spotlight of every card on the page.
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let last: HTMLElement | null = null;
+    const onMove = (e: PointerEvent) => {
+      const el = (e.target as HTMLElement | null)?.closest?.(".surface") as HTMLElement | null;
+      if (!el) return;
+      if (last && last !== el) last.style.removeProperty("--mx");
+      last = el;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      el.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    document.addEventListener("pointermove", onMove, { passive: true });
+    return () => document.removeEventListener("pointermove", onMove);
+  }, []);
 
   return (
     <CrumbContext.Provider value={setCrumbs}>
@@ -317,7 +333,9 @@ export function AppShell() {
           </header>
           <UpdateBanner />
           <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
-            <Outlet />
+            <div key={location.pathname.split("/").slice(0, 3).join("/")} className="animate-page">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

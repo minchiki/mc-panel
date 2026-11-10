@@ -89,7 +89,7 @@ export default function ServerLayout() {
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden">
+      <Card className="beam overflow-hidden">
         <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
           <ServerIcon serverId={server.id} className="size-14 rounded-xl" />

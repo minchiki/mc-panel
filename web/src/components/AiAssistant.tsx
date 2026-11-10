@@ -277,7 +277,7 @@ function AiPanel({ enabled, isAdmin, userId, draft, onDraftUsed, onClose }: { en
                   {server ? "Я вижу консоль, файлы и моды этого сервера. Могу найти причину ошибки и подобрать моды." : "Спросите про панель, сервер или моды."} Любое изменение выполняется только после вашей кнопки.
                 </p>
               </div>
-              <div className="grid gap-2">
+              <div className="stagger grid gap-2">
                 {suggestions.map((s) => (
                   <button
                     key={s}
@@ -292,11 +292,11 @@ function AiPanel({ enabled, isAdmin, userId, draft, onDraftUsed, onClose }: { en
           ) : (
             msgs.map((m, i) =>
               m.role === "user" ? (
-                <div key={i} className="flex justify-end">
+                <div key={i} className="flex justify-end animate-rise">
                   <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-primary/10 px-3.5 py-2 text-sm">{m.content}</p>
                 </div>
               ) : (
-                <div key={i} className="space-y-2.5">
+                <div key={i} className="space-y-2.5 animate-rise">
                   {m.steps && m.steps.length > 0 && (
                     <div className="space-y-1">
                       {m.steps.map((s, j) => (

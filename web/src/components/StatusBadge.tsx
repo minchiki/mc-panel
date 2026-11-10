@@ -23,7 +23,7 @@ export function StatusBadge({ status, size = "default", className }: { status: S
         className,
       )}
     >
-      <span className={cn("rounded-full", size === "lg" ? "size-2.5" : "size-2", s.dot, s.pulse && "animate-pulse-dot")} />
+      <span className={cn("rounded-full", size === "lg" ? "size-2.5" : "size-2", s.dot, s.pulse && "animate-pulse-dot", status === "online" && "dot-live")} />
       {t(`status.${status}`)}
     </span>
   );
