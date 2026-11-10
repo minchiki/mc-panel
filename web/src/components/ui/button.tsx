@@ -10,7 +10,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-gradient-to-b from-[hsl(142_69%_58%)] to-primary text-primary-foreground shadow-[inset_0_0_0_1px_hsl(142_69%_62%/0.35),0_8px_22px_-10px_hsl(var(--primary)/0.75)] hover:brightness-110",
+          "btn-shine bg-gradient-to-b from-[hsl(142_69%_58%)] to-primary text-primary-foreground shadow-[inset_0_0_0_1px_hsl(142_69%_62%/0.35),0_8px_22px_-10px_hsl(var(--primary)/0.75)] hover:brightness-110",
         destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         warning: "bg-warning text-warning-foreground shadow-sm hover:bg-warning/90",
         outline: "border border-input bg-white/[0.02] hover:border-foreground/20 hover:bg-accent hover:text-accent-foreground",
