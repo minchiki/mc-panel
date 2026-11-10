@@ -74,7 +74,9 @@ function NavItem({ to, icon, label, end, onClick }: { to: string; icon: ReactNod
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
-          isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          isActive
+            ? "bg-primary/10 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.22)]"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground",
         )
       }
     >
@@ -112,7 +114,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-colors",
-                  isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  isActive ? "bg-accent text-foreground shadow-[inset_0_0_0_1px_hsl(var(--border))]" : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )
               }
             >
@@ -282,8 +284,9 @@ export function AppShell() {
           </div>
         )}
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-md sm:px-6">
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <div className="app-glow" aria-hidden="true" />
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/70 px-4 backdrop-blur-xl sm:px-6">
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Открыть меню">
               <Menu />
             </Button>
@@ -313,7 +316,7 @@ export function AppShell() {
             <UserMenu />
           </header>
           <UpdateBanner />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
+          <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
             <Outlet />
           </main>
         </div>
@@ -327,7 +330,7 @@ export function PageHeader({ title, description, actions }: { title: ReactNode; 
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0 space-y-1">
-        <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="truncate bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-2xl font-semibold tracking-tight text-transparent sm:text-[28px]">{title}</h1>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}

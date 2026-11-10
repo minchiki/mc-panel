@@ -14,7 +14,8 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
   const { settings } = useAuth();
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.18),transparent_60%)]" />
+      <div className="app-glow !h-full" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.16),transparent_60%)]" />
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <Logo className="size-16 drop-shadow-[0_6px_16px_hsl(var(--primary)/0.35)]" />
