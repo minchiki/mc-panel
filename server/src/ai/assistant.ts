@@ -174,6 +174,8 @@ export interface Ctx {
   server: ServerRow | null;
   access: ServerAccess | null;
   actions: ProposedAction[];
+  /** source:id pairs returned by search_addons in this chat turn: install proposals must use one of them. */
+  found?: Set<string>;
 }
 
 export async function runTool(name: string, args: Record<string, unknown>, ctx: Ctx): Promise<string> {
@@ -237,6 +239,8 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
       try {
         const items = await searchCatalog(server!, source, str(args.query, 100) ?? "", 0);
         if (!items.length) return "Ничего не нашлось под это ядро и версию.";
+        ctx.found ??= new Set();
+        for (const i of items.slice(0, 6)) ctx.found.add(`${i.source}:${i.id}`);
         return items
           .slice(0, 6)
           .map((i) => `- ${i.title} (source=${i.source}, id=${i.id}, скачиваний ${i.downloads}): ${i.description.slice(0, 140)}`)
@@ -253,6 +257,7 @@ export async function runTool(name: string, args: Record<string, unknown>, ctx: 
       const a: ProposedAction = { kind, title: str(args.title, 120) ?? kind };
       if (kind === "install_addon") {
         if (!(SOURCES as readonly string[]).includes(String(args.source)) || !str(args.id)) return "Нужны source и id из search_addons.";
+        if (!ctx.found?.has(`${String(args.source)}:${String(args.id)}`)) return "Этот id не из результатов поиска. Сначала вызови search_addons и возьми точный id оттуда; не придумывай id.";
         a.source = args.source as Source;
         a.id = str(args.id, 100);
       } else if (kind === "delete_addon" || kind === "toggle_addon") {
