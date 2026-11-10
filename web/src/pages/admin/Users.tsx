@@ -69,6 +69,16 @@ export default function AdminUsers() {
   };
 
   const toggleRegistration = async (enabled: boolean) => {
+    if (
+      enabled &&
+      !(await confirm({
+        title: "Открыть регистрацию для всех?",
+        description:
+          "Любой, кто знает адрес, сможет создать аккаунт. По закону 406-ФЗ российских пользователей сайта с регистрацией нужно подтверждать по российскому номеру телефона или через Госуслуги, а панель этого не умеет. Для своих друзей надёжнее оставить регистрацию закрытой и создавать аккаунты вручную.",
+        confirmText: "Всё равно открыть",
+      }))
+    )
+      return;
     try {
       await put("/api/admin/settings", { registrationEnabled: enabled });
       await registration.refetch();
@@ -103,7 +113,7 @@ export default function AdminUsers() {
                 <th className="px-4 py-3 font-medium">Пользователь</th>
                 <th className="py-3 font-medium">Роль</th>
                 <th className="hidden py-3 font-medium sm:table-cell">Серверы</th>
-                <th className="hidden py-3 font-medium md:table-cell">Лимит RAM</th>
+                <th className="hidden py-3 font-medium md:table-cell">Лимит памяти</th>
                 <th className="hidden py-3 font-medium lg:table-cell">2FA</th>
                 <th className="hidden py-3 font-medium lg:table-cell">Создан</th>
                 <th />
@@ -175,7 +185,7 @@ export default function AdminUsers() {
                 <Field label="Макс. серверов">
                   <Input type="number" min={0} value={draft.maxServers} onChange={(e) => setDraft({ ...draft, maxServers: Number(e.target.value) })} />
                 </Field>
-                <Field label="RAM всего, МБ">
+                <Field label="Память всего, МБ">
                   <Input type="number" min={0} step={512} value={draft.maxRamMb} onChange={(e) => setDraft({ ...draft, maxRamMb: Number(e.target.value) })} />
                 </Field>
               </div>

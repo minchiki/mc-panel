@@ -61,14 +61,14 @@ function ServerCard({ server }: { server: Server }) {
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Cpu className="size-3.5" /> CPU
+              <Cpu className="size-3.5" /> Процессор
             </div>
             <div className="font-medium tabular-nums">{server.stats ? `${Math.round(cpuPct)}%` : "—"}</div>
             <Progress value={cpuPct} />
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MemoryStick className="size-3.5" /> RAM
+              <MemoryStick className="size-3.5" /> Память
             </div>
             <div className="truncate font-medium tabular-nums">{server.stats ? `${formatMb(server.stats.memMb)}` : formatMb(server.ramMb)}</div>
             <Progress value={memPct} />

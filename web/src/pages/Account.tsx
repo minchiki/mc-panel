@@ -15,6 +15,7 @@ import { formatDate } from "@/lib/format";
 import type { AuditEntry, User } from "@/lib/types";
 import { EmailCard } from "./EmailCard";
 import { LegalLinks } from "./Legal";
+import { PrivacyCard } from "./PrivacyCard";
 
 function PasswordCard() {
   const [form, setForm] = useState({ current: "", next: "", repeat: "" });
@@ -277,6 +278,7 @@ export default function AccountPage() {
         <div className="space-y-6">
           <TwoFactorCard user={user} />
           <SessionsCard />
+          <PrivacyCard user={user} />
         </div>
         <div className="lg:col-span-2">
           <ApiKeysCard />

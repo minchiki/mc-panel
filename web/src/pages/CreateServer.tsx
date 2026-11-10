@@ -275,7 +275,7 @@ export default function CreateServerPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label={<span className="flex items-center gap-2"><Cpu className="size-4 text-muted-foreground" /> Ядра CPU</span>} hint="Сколько ядер может занять сервер">
+              <Field label={<span className="flex items-center gap-2"><Cpu className="size-4 text-muted-foreground" /> Ядра процессора</span>} hint="Сколько ядер может занять сервер">
                 <Select value={cpuLimit} onChange={(e) => setCpuLimit(Number(e.target.value))} disabled={!isAdmin}>
                   {[0.5, 1, 1.5, 2, 3, 4].map((c) => (
                     <option key={c} value={c}>
@@ -339,7 +339,7 @@ export default function CreateServerPage() {
                 ["Версия", `${version?.id}${version?.build ? ` (${version.build})` : ""}`],
                 ["Java", java],
                 ["Память", formatMb(ramMb)],
-                ["CPU", `${cpuLimit} ядра`],
+                ["Процессор", `${cpuLimit} ядра`],
                 ["Диск", formatMb(diskMb)],
               ].map(([k, v]) => (
                 <div key={String(k)}>
