@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Download, KeyRound, Mail, Palette, Save, Scale, Send } from "lucide-react";
+import { Bell, Download, KeyRound, Mail, Palette, Save, Scale, Send, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, useCrumbs } from "@/components/AppShell";
@@ -31,6 +31,10 @@ interface Settings {
   panelUrl: string;
   operatorName: string;
   operatorContact: string;
+  aiApiKey: string;
+  aiApiBase: string;
+  aiRelayKey: string;
+  aiModels: string;
 }
 
 const SMTP_PRESETS = [
@@ -289,6 +293,37 @@ export default function AdminSettings() {
                 <Send /> Сохранить и отправить тест
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="size-4" /> ИИ-помощник
+            </CardTitle>
+            <CardDescription>
+              Кнопка «Спросить ИИ» в шапке панели: помощник смотрит консоль, краш-репорты и моды сервера, ищет причину ошибок и подбирает моды. Изменения он только предлагает, выполняет их пользователь
+              своей кнопкой. Работает на бесплатных моделях OpenRouter: создайте ключ на openrouter.ai → Keys.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Field label="Ключ OpenRouter" hint="Начинается с sk-or-. Сохранённый ключ показан звёздочками.">
+              <Input type="password" value={form.aiApiKey ?? ""} onChange={(e) => set("aiApiKey", e.target.value.trim())} placeholder="sk-or-v1-…" autoComplete="off" />
+            </Field>
+            <details className="rounded-lg border p-3 text-sm">
+              <summary className="cursor-pointer font-medium">Дополнительно: relay и модели</summary>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Адрес API" hint="Пусто = openrouter.ai. Если сайт заблокирован у хостинга, укажите свой relay">
+                  <Input value={form.aiApiBase ?? ""} onChange={(e) => set("aiApiBase", e.target.value.trim())} placeholder="https://openrouter.ai/api/v1" />
+                </Field>
+                <Field label="Ключ relay" hint="Заголовок x-relay-key, если relay его требует">
+                  <Input type="password" value={form.aiRelayKey ?? ""} onChange={(e) => set("aiRelayKey", e.target.value.trim())} autoComplete="off" />
+                </Field>
+                <Field label="Модели" hint="Через запятую, пробуются по очереди. Пусто = бесплатные по умолчанию" className="sm:col-span-2">
+                  <Input value={form.aiModels ?? ""} onChange={(e) => set("aiModels", e.target.value)} placeholder="nvidia/nemotron-3-ultra-550b-a55b:free, google/gemma-4-31b-it:free, openrouter/free" />
+                </Field>
+              </div>
+            </details>
           </CardContent>
         </Card>
 

@@ -1,3 +1,4 @@
+import { AiProvider, AiTrigger } from "./AiAssistant";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -263,6 +264,7 @@ export function AppShell() {
 
   return (
     <CrumbContext.Provider value={setCrumbs}>
+      <AiProvider>
       <div className="flex min-h-dvh">
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r bg-sidebar lg:block">
           <Sidebar />
@@ -304,6 +306,7 @@ export function AppShell() {
                 <WifiOff className="size-3.5" /> Переподключение…
               </span>
             )}
+            <AiTrigger />
             <Button variant="ghost" size="icon" onClick={toggle} aria-label="Сменить тему">
               {theme === "dark" ? <Sun /> : <Moon />}
             </Button>
@@ -315,6 +318,7 @@ export function AppShell() {
           </main>
         </div>
       </div>
+      </AiProvider>
     </CrumbContext.Provider>
   );
 }

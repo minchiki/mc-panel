@@ -172,6 +172,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         telegramRelayKey: s.telegramRelayKey ? "••••••" : "",
         curseforgeApiKey: s.curseforgeApiKey ? "••••••" : "",
         smtpPass: s.smtpPass ? "••••••" : "",
+        aiApiKey: s.aiApiKey ? "••••••" : "",
+        aiRelayKey: s.aiRelayKey ? "••••••" : "",
       },
     };
   });
@@ -207,6 +209,10 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         smtpFrom: z.string().trim().max(200).regex(/^$|^[^<>\r\n]*<?[^\s@<>]+@[^\s@<>]+>?$/, "Адрес отправителя, например «MC Panel <panel@yandex.ru>»").optional(),
         panelUrl: z.string().trim().max(200).regex(/^$|^https?:\/\/[^\s/]+(\/[^\s]*)?$/, "Адрес панели должен начинаться с https://").optional(),
         operatorName: z.string().trim().max(200).regex(/^[^<>\r\n]*$/, "Без угловых скобок и переносов строк").optional(),
+        aiApiKey: z.string().trim().max(200).regex(/^$|^sk-or-[\w-]+$|^••••••$/, "Ключ OpenRouter начинается с sk-or-").optional(),
+        aiApiBase: z.string().trim().max(200).regex(/^$|^https:\/\/[^\s]+$/, "Адрес должен начинаться с https://").optional(),
+        aiRelayKey: z.string().trim().max(100).regex(/^[^\s]*$|^••••••$/, "Ключ не должен содержать пробелов").optional(),
+        aiModels: z.string().trim().max(500).regex(/^[\w./:,\s-]*$/, "Список моделей через запятую").optional(),
         operatorContact: z.string().trim().max(200).regex(/^[^<>\r\n]*$/, "Без угловых скобок и переносов строк").optional(),
       }),
       req.body,
@@ -216,6 +222,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     if (body.telegramRelayKey === "••••••") delete body.telegramRelayKey;
     if (body.curseforgeApiKey === "••••••") delete body.curseforgeApiKey;
     if (body.smtpPass === "••••••") delete body.smtpPass;
+    if (body.aiApiKey === "••••••") delete body.aiApiKey;
+    if (body.aiRelayKey === "••••••") delete body.aiRelayKey;
     if (body.panelUrl) body.panelUrl = body.panelUrl.replace(/\/+$/, "");
     updateSettings(body);
     audit({ userId: currentUser(req).id, action: "admin.settings", details: Object.keys(body), ip: req.ip });
