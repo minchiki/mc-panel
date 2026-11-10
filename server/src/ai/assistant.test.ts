@@ -16,6 +16,8 @@ describe("assistant tools", () => {
     const c = ctx(["plugins"]);
     expect(await runTool("propose_action", { kind: "power", title: "x", action: "restart" }, c)).toMatch(/нет прав/);
     expect(await runTool("propose_action", { kind: "install_addon", title: "Sodium", source: "evil", id: "x" }, c)).toMatch(/source и id/);
+    expect(await runTool("propose_action", { kind: "install_addon", title: "Made up", source: "modrinth", id: "6nOcR8mP" }, c)).toMatch(/не из результатов поиска/);
+    c.found = new Set(["modrinth:AANobbMI"]);
     await runTool("propose_action", { kind: "install_addon", title: "Sodium", source: "modrinth", id: "AANobbMI" }, c);
     expect(c.actions).toEqual([{ kind: "install_addon", title: "Sodium", source: "modrinth", id: "AANobbMI" }]);
 
