@@ -1,9 +1,10 @@
-import { mkdir, readdir, realpath, rename, rm, stat } from "node:fs/promises";
+import { readdir, rename, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { CORE_INFO, type Core } from "../cores/types.js";
-import { badRequest, conflict, notFound } from "../lib/errors.js";
+import { badRequest, conflict, HttpError, notFound } from "../lib/errors.js";
 import { downloadFile, fetchJson, type Checksum } from "../lib/http.js";
-import { assertFileName, isWithin } from "../lib/paths.js";
+import { assertFileName } from "../lib/paths.js";
+import { mkdirInside } from "../lib/safefs.js";
 import { getSettings } from "../lib/settings.js";
 import { invalidateDisk } from "../servers/disk.js";
 import { dataDirOf, type ServerRow } from "../servers/repo.js";
@@ -44,11 +45,10 @@ export function sourcesFor(core: Core): Source[] {
 
 /** plugins/ or mods/, created if missing and verified not to be a symlink out of the server dir. */
 export async function addonsDir(server: ServerRow): Promise<string> {
-  const dir = join(dataDirOf(server.id), CORE_INFO[server.core].addons.dir);
-  await mkdir(dir, { recursive: true });
-  const [realRoot, realDir] = await Promise.all([realpath(dataDirOf(server.id)), realpath(dir)]);
-  if (!isWithin(realRoot, realDir)) throw badRequest("Папка плагинов указывает за пределы сервера");
-  return realDir;
+  const root = dataDirOf(server.id);
+  return mkdirInside(root, join(root, CORE_INFO[server.core].addons.dir)).catch((err) => {
+    throw err instanceof HttpError ? badRequest("Папка плагинов указывает за пределы сервера") : err;
+  });
 }
 
 // ------------------------------------------------------------- search
@@ -235,7 +235,7 @@ export async function installFromCatalog(server: ServerRow, source: Source, id: 
   const filename = safeJarName(target.filename);
   const dir = await addonsDir(server);
   try {
-    await downloadFile(target.url, join(dir, filename), { checksum: target.checksum });
+    await downloadFile(target.url, join(dir, filename), { checksum: target.checksum, insideRoot: dataDirOf(server.id) });
   } catch (err) {
     if (source === "spiget") {
       throw conflict(`SpigotMC не отдал файл автоматически (защита сайта). Скачайте плагин вручную со страницы ресурса и загрузите jar. (${(err as Error).message})`);

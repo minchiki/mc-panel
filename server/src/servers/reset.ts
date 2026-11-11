@@ -9,13 +9,14 @@ import { clearPreset } from "../plugins/modlist.js";
 import { invalidateDisk } from "./disk.js";
 import { dataDirOf, type ServerRow } from "./repo.js";
 import { runtime, withServerStopped } from "./runtime.js";
+import { readInside } from "../lib/safefs.js";
 
 // Vanilla keeps dimensions inside the level folder; Bukkit forks split them out.
 const DIMENSION_SUFFIXES = ["", "_nether", "_the_end"];
 
 async function levelName(serverId: string): Promise<string> {
   const text = await resolveExisting(dataDirOf(serverId), "server.properties")
-    .then((p) => readFile(p, "utf8"))
+    .then(async (p) => (await readInside(dataDirOf(serverId), p)).toString("utf8"))
     .catch(() => "");
   const name = toRecord(parseProperties(text))["level-name"]?.trim() || "world";
   assertFileName(name);

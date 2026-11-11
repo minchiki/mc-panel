@@ -17,7 +17,8 @@ import { connectionInfo, createDatabase, deleteDatabase, listDatabases, rotatePa
 import { badRequest, conflict } from "../lib/errors.js";
 import { parse } from "../lib/validate.js";
 import { deleteAddon, installFromCatalog, SOURCES, listInstalled, safeJarName, searchCatalog, setAddonEnabled, sourcesFor, addonsDir } from "../plugins/catalog.js";
-import { deleteSchedule, listSchedules, nextRuns, runSchedule, saveSchedule, SCHEDULE_ACTIONS, validateCron } from "../schedules/service.js";
+import { deleteSchedule, listSchedules, nextRuns, runSchedule, saveSchedule, SCHEDULE_ACTIONS, validateCron, type ScheduleAction } from "../schedules/service.js";
+import type { ServerPermission } from "../auth/permissions.js";
 import { CORE_INFO } from "../cores/types.js";
 import { saveUpload } from "../files/service.js";
 import { dataDirOf } from "../servers/repo.js";
@@ -25,6 +26,16 @@ import { runtime } from "../servers/runtime.js";
 import { relative } from "node:path";
 import { attachment } from "./files.js";
 import { auditServer, serverFor, type IdParams } from "./common.js";
+
+/** A scheduled task does what its action does, so it needs that permission too, not only "schedules". */
+const ACTION_PERMISSION: Record<ScheduleAction, ServerPermission> = {
+  restart: "power",
+  start: "power",
+  stop: "power",
+  command: "console",
+  broadcast: "console",
+  backup: "backups",
+};
 
 type SubParams = { Params: { id: string; sub: string } };
 
@@ -102,6 +113,10 @@ export async function serverExtraRoutes(app: FastifyInstance): Promise<void> {
       req.body,
     );
     if ((body.action === "command" || body.action === "broadcast") && !body.payload) throw badRequest("Укажите команду или текст");
+    serverFor(req, ACTION_PERMISSION[body.action]);
+    // Editing an existing task also needs the permission of what it did before.
+    const before = body.id === undefined ? undefined : listSchedules(server.id).find((s) => s.id === body.id);
+    if (before) serverFor(req, ACTION_PERMISSION[before.action]);
     const row = saveSchedule(server.id, body);
     auditServer(req, server.id, "schedule.save", { name: body.name, cron: body.cron, action: body.action });
     return { schedule: row };
@@ -110,7 +125,9 @@ export async function serverExtraRoutes(app: FastifyInstance): Promise<void> {
   app.post<SubParams>("/api/servers/:id/schedules/:sub/run", { preHandler: requireUser }, async (req) => {
     const { server } = serverFor(req, "schedules");
     const id = Number(req.params.sub);
-    if (!listSchedules(server.id).some((s) => s.id === id)) throw badRequest("Задача не найдена");
+    const schedule = listSchedules(server.id).find((s) => s.id === id);
+    if (!schedule) throw badRequest("Задача не найдена");
+    serverFor(req, ACTION_PERMISSION[schedule.action]);
     void runSchedule(id);
     return { ok: true };
   });

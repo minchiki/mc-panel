@@ -6,9 +6,9 @@
  * overrides/ and server-overrides/ folders copied over the server. Client-only files are skipped.
  */
 import { createWriteStream } from "node:fs";
-import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import type { Readable } from "node:stream";
+import { Transform, type Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import yauzl from "yauzl";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import { randomId } from "../lib/crypto.js";
 import { badRequest, conflict, errorMessage, HttpError, notFound } from "../lib/errors.js";
 import { downloadFile } from "../lib/http.js";
 import { isWithin, resolveInside } from "../lib/paths.js";
+import { mkdirInside, readInside, writeInside } from "../lib/safefs.js";
 import { invalidateDisk, serverDiskBytes } from "../servers/disk.js";
 import { reinstallServer } from "../servers/lifecycle.js";
 import { dataDirOf, getServer, type ServerRow } from "../servers/repo.js";
@@ -36,6 +37,11 @@ const PROTECTED = /^(server\.jar|eula\.txt|run\.(sh|bat)|user_jvm_args\.txt|libr
 /** Override folders useless on a server. */
 const SKIP_ON_SERVER = /^(shaderpacks|resourcepacks|screenshots|saves|logs|crash-reports)(\/|$)|(^|\/)(desktop\.ini|thumbs\.db|\.ds_store)$/i;
 const MAX_PACK_BYTES = 1024 * 1024 * 1024;
+/** All uploaded packs together; a new upload is refused above this until old ones expire. */
+const MAX_PACK_CACHE_BYTES = 4 * 1024 * 1024 * 1024;
+/** Nested jars read while checking one mod (Fabric jar-in-jar), by count and by total size. */
+const MAX_NESTED_JARS = 64;
+const MAX_NESTED_BYTES = 256 * 1024 * 1024;
 
 const indexSchema = z.object({
   formatVersion: z.literal(1, { error: "Неизвестная версия формата .mrpack" }),
@@ -173,12 +179,24 @@ const packDir = () => join(config.SERVERS_DIR, "..", "cache", "mrpacks");
 const PACK_TTL_MS = 3 * 3600_000;
 const owners = new Map<string, number>();
 
-async function purgeOldPacks(): Promise<void> {
+async function purgeOldPacks(userId?: number): Promise<void> {
   const dir = packDir();
+  // A user only ever needs the pack they are about to install: drop their older uploads.
+  if (userId !== undefined) {
+    for (const [id, owner] of owners) {
+      if (owner !== userId) continue;
+      owners.delete(id);
+      await rm(join(dir, `${id}.mrpack`), { force: true });
+    }
+  }
+  let total = 0;
   for (const f of await readdir(dir).catch(() => [] as string[])) {
     const s = await stat(join(dir, f)).catch(() => null);
-    if (s && Date.now() - s.mtimeMs > PACK_TTL_MS) await rm(join(dir, f), { force: true });
+    if (!s) continue;
+    if (Date.now() - s.mtimeMs > PACK_TTL_MS) await rm(join(dir, f), { force: true });
+    else total += s.size;
   }
+  if (total > MAX_PACK_CACHE_BYTES) throw new HttpError(507, "Сейчас загружено слишком много сборок, попробуйте через пару часов");
 }
 
 /** Reads the index and override count of a pack file on disk. */
@@ -223,12 +241,21 @@ async function registerPack(tmp: string, userId: number): Promise<PackInfo> {
 export async function savePackUpload(data: Readable, fileName: string, userId: number): Promise<PackInfo> {
   if (!/\.mrpack$/i.test(fileName)) throw badRequest("Нужен файл сборки с расширением .mrpack");
   await mkdir(packDir(), { recursive: true });
-  await purgeOldPacks();
+  await purgeOldPacks(userId);
   const tmp = join(packDir(), `upload-${randomId(10)}.part`);
-  await pipeline(data, createWriteStream(tmp, { flags: "wx" }));
-  if ((await stat(tmp)).size > MAX_PACK_BYTES) {
+  let bytes = 0;
+  const limit = new Transform({
+    transform(chunk: Buffer, _enc, cb) {
+      bytes += chunk.length;
+      if (bytes > MAX_PACK_BYTES) cb(badRequest("Сборка больше 1 ГБ"));
+      else cb(null, chunk);
+    },
+  });
+  try {
+    await pipeline(data, limit, createWriteStream(tmp, { flags: "wx" }));
+  } catch (err) {
     await rm(tmp, { force: true });
-    throw badRequest("Сборка больше 1 ГБ");
+    throw err;
   }
   return registerPack(tmp, userId);
 }
@@ -245,7 +272,7 @@ export async function savePackFromUrl(url: string, userId: number): Promise<Pack
     throw badRequest("Нужна прямая ссылка на файл .mrpack с cdn.modrinth.com (страница сборки → Versions → скачать)");
   }
   await mkdir(packDir(), { recursive: true });
-  await purgeOldPacks();
+  await purgeOldPacks(userId);
   const tmp = join(packDir(), `url-${randomId(10)}.part`);
   try {
     await downloadFile(u.href, tmp);
@@ -285,7 +312,7 @@ export function parseFabricModJson(text: string): { id?: string; provides?: stri
   return null;
 }
 
-async function readFabricMod(jar: Buffer, depth = 0): Promise<FabricMod | null> {
+async function readFabricMod(jar: Buffer, depth = 0, budget = { bytes: MAX_NESTED_BYTES }): Promise<FabricMod | null> {
   let zip: yauzl.ZipFile;
   try {
     zip = await openBuffer(jar);
@@ -293,23 +320,25 @@ async function readFabricMod(jar: Buffer, depth = 0): Promise<FabricMod | null> 
     return null;
   }
   let meta: ReturnType<typeof parseFabricModJson> = null;
-  const nested: Buffer[] = [];
+  // Nested jars are read and checked one at a time (never all held in memory), with a count and size budget.
+  const nestedIds: string[] = [];
+  let nestedCount = 0;
   const wanted = new Set<string>();
   await eachEntry(zip, async (e) => {
     if (e.fileName === "fabric.mod.json") {
       meta = parseFabricModJson((await streamToBuffer(await entryStream(zip, e), 2 * 1024 * 1024)).toString("utf8"));
       for (const j of meta?.jars ?? []) if (typeof j?.file === "string") wanted.add(j.file);
     } else if (depth < 2 && e.fileName.endsWith(".jar") && e.fileName.startsWith("META-INF/jars/")) {
-      nested.push(await streamToBuffer(await entryStream(zip, e), 64 * 1024 * 1024));
+      if (++nestedCount > MAX_NESTED_JARS || budget.bytes <= 0) return;
+      const buf = await streamToBuffer(await entryStream(zip, e), Math.min(64 * 1024 * 1024, budget.bytes));
+      budget.bytes -= buf.length;
+      const inner = await readFabricMod(buf, depth + 1, budget);
+      if (inner) nestedIds.push(...inner.ids);
     }
   });
   const m = meta as ReturnType<typeof parseFabricModJson>;
   if (!m?.id) return null;
-  const ids = [m.id, ...(Array.isArray(m.provides) ? m.provides : [])];
-  for (const n of nested) {
-    const inner = await readFabricMod(n, depth + 1);
-    if (inner) ids.push(...inner.ids);
-  }
+  const ids = [m.id, ...(Array.isArray(m.provides) ? m.provides : []), ...nestedIds];
   return { ids, depends: Object.keys(m.depends ?? {}), clientOnly: m.environment === "client" };
 }
 
@@ -355,7 +384,7 @@ export interface InstalledPack {
 const markerPath = (serverId: string) => join(dataDirOf(serverId), ".mrpack.json");
 export async function installedPack(serverId: string): Promise<InstalledPack | null> {
   try {
-    return JSON.parse(await readFile(markerPath(serverId), "utf8")) as InstalledPack;
+    return JSON.parse((await readInside(dataDirOf(serverId), markerPath(serverId))).toString("utf8")) as InstalledPack;
   } catch {
     return null;
   }
@@ -444,11 +473,11 @@ async function runInstall(serverId: string, packFile: string, index: PackIndex, 
               failures.push(`${f.path}: ${!rel ? "недопустимый путь" : "ссылка не с Modrinth/GitHub"}`);
               continue;
             }
-            const dest = resolveInside(root, rel);
-            if (!isWithin(root, dest)) continue;
-            await mkdir(dirname(dest), { recursive: true });
+            const lexical = resolveInside(root, rel);
+            if (!isWithin(root, lexical)) continue;
             try {
-              await downloadFile(url, dest, { checksum: { algorithm: "sha512", hex: f.hashes.sha512 } });
+              const dest = join(await mkdirInside(root, dirname(lexical)), basename(lexical));
+              await downloadFile(url, dest, { checksum: { algorithm: "sha512", hex: f.hashes.sha512 }, insideRoot: root });
               written.push(rel);
             } catch (err) {
               failures.push(`${basename(rel)}: ${errorMessage(err)}`);
@@ -469,8 +498,7 @@ async function runInstall(serverId: string, packFile: string, index: PackIndex, 
           if (!rel || SKIP_ON_SERVER.test(rel)) return;
           const dest = resolveInside(root, rel);
           if (!isWithin(root, dest)) return;
-          await mkdir(dirname(dest), { recursive: true });
-          await pipeline(await entryStream(zip, e), createWriteStream(dest));
+          await writeInside(root, dest, await entryStream(zip, e));
           if (!written.includes(rel)) written.push(rel);
           copied++;
         });
@@ -480,7 +508,8 @@ async function runInstall(serverId: string, packFile: string, index: PackIndex, 
       // 3. Fabric packs sometimes mark a library as client-only although a server mod needs it.
       if (target.core === "fabric") await fixFabricDependencies(index, modsDir, written, say);
 
-      await writeFile(
+      await writeInside(
+        root,
         markerPath(serverId),
         JSON.stringify({ name: index.name, version: index.versionId, core: target.core, mcVersion: target.mcVersion, installedAt: Date.now(), files: written } satisfies InstalledPack, null, 1),
       );
@@ -500,6 +529,9 @@ async function runInstall(serverId: string, packFile: string, index: PackIndex, 
 async function fixFabricDependencies(index: PackIndex, modsDir: string, written: string[], say: (l: string) => void): Promise<void> {
   const mods: FabricMod[] = [];
   for (const f of (await readdir(modsDir)).filter((n) => n.endsWith(".jar"))) {
+    // A planted symlink (to /dev/zero, another server, ...) or a huge file is skipped, not read into memory.
+    const st = await lstat(join(modsDir, f)).catch(() => null);
+    if (!st?.isFile() || st.size > 512 * 1024 * 1024) continue;
     const mod = await readFabricMod(await readFile(join(modsDir, f))).catch(() => null);
     if (mod) mods.push(mod);
   }
@@ -515,7 +547,7 @@ async function fixFabricDependencies(index: PackIndex, modsDir: string, written:
       if (!rel || !url) continue;
       const tmp = join(modsDir, `.check-${randomId(6)}.jar`);
       try {
-        await downloadFile(url, tmp, { checksum: { algorithm: "sha512", hex: f.hashes.sha512 } });
+        await downloadFile(url, tmp, { checksum: { algorithm: "sha512", hex: f.hashes.sha512 }, insideRoot: modsDir });
         const mod = await readFabricMod(await readFile(tmp));
         if (mod?.ids.includes(dep) && !mod.clientOnly) {
           await rename(tmp, join(modsDir, safeJarName(basename(rel))));
