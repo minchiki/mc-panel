@@ -1,3 +1,4 @@
+import os from "node:os";
 import type { Duplex } from "node:stream";
 import { config } from "../config.js";
 import { one } from "../db/index.js";
@@ -266,9 +267,36 @@ async function doKill(rt: Runtime): Promise<void> {
 
 // ---------------------------------------------------------------- public API
 
+/** Memory left for the OS, Docker, the panel and the bot. */
+export const HOST_RESERVE_MB = 1200;
+
+/**
+ * How many MB are missing to run a server needing `requestedMb` next to servers already
+ * using `runningMb`, on a host with `hostMb` of RAM (0 = it fits). Starting past the host's
+ * memory gets processes killed by the kernel, possibly the panel itself.
+ */
+export function memoryShortfallMb(hostMb: number, runningMb: number[], requestedMb: number, reserveMb = HOST_RESERVE_MB): number {
+  const used = runningMb.reduce((a, b) => a + b, 0);
+  return Math.max(0, used + requestedMb - (hostMb - reserveMb));
+}
+
+function assertMemoryFor(id: string): void {
+  const others = listAllServers().filter((s) => s.id !== id && isActive(runtime(s.id).status));
+  const need = getServer(id).ram_mb;
+  const hostMb = Math.round(os.totalmem() / 1048576);
+  const missing = memoryShortfallMb(hostMb, others.map((s) => s.ram_mb), need);
+  if (missing > 0) {
+    const free = Math.max(0, hostMb - HOST_RESERVE_MB - others.reduce((a, s) => a + s.ram_mb, 0));
+    throw conflict(
+      `Не хватает памяти VPS: серверу нужно ${need} МБ, свободно ${free} МБ (уже запущены: ${others.map((s) => `«${s.name}» ${s.ram_mb} МБ`).join(", ")}). Остановите другой сервер или уменьшите RAM.`,
+    );
+  }
+}
+
 export const startServer = (id: string) => {
   const rt = runtime(id);
   rt.crashes = [];
+  if (!isActive(rt.status)) assertMemoryFor(id);
   return rt.exclusive(() => doStart(rt));
 };
 export const stopServer = (id: string) => runtime(id).exclusive(() => doStop(runtime(id)));

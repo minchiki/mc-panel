@@ -5,6 +5,7 @@ import { compareVersions, neoforgeToMc } from "../cores/versions.js";
 import { demuxBuffer } from "../docker/client.js";
 import { buildCommand, heapMb, internalPort, isNoiseLine, isReadyLine, stopCommand, voiceChatUpdates } from "./prepare.js";
 import { parseSsRtt } from "./ping.js";
+import { memoryShortfallMb } from "./runtime.js";
 import { parsePlayerAddress, parsePlayerEvent } from "./players.js";
 import type { ServerRow } from "./repo.js";
 import { computeStats } from "./stats.js";
@@ -146,5 +147,16 @@ describe("simple voice chat", () => {
 
   it("keeps an owner-set host but fixes its port", () => {
     expect(voiceChatUpdates(row(25570), "play.my.ru:24454").voice_host).toBe("play.my.ru:25570");
+  });
+});
+
+describe("host memory guard", () => {
+  it("lets servers start while they fit next to the reserve", () => {
+    expect(memoryShortfallMb(8000, [], 3072, 1200)).toBe(0);
+    expect(memoryShortfallMb(8000, [3072], 3072, 1200)).toBe(0);
+  });
+  it("reports how much is missing when they do not", () => {
+    expect(memoryShortfallMb(8000, [3072, 3072], 3072, 1200)).toBe(2416);
+    expect(memoryShortfallMb(8000, [], 8000, 1200)).toBe(1200);
   });
 });
