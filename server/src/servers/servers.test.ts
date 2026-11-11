@@ -3,7 +3,7 @@ import { sanitizeExcludes } from "../backups/service.js";
 import { guessJava, pickJava } from "../cores/java.js";
 import { compareVersions, neoforgeToMc } from "../cores/versions.js";
 import { demuxBuffer } from "../docker/client.js";
-import { buildCommand, heapMb, internalPort, isNoiseLine, isReadyLine, stopCommand } from "./prepare.js";
+import { buildCommand, heapMb, internalPort, isNoiseLine, isReadyLine, stopCommand, voiceChatUpdates } from "./prepare.js";
 import { parseSsRtt } from "./ping.js";
 import { parsePlayerAddress, parsePlayerEvent } from "./players.js";
 import type { ServerRow } from "./repo.js";
@@ -133,5 +133,18 @@ describe("docker helpers", () => {
     expect(s.cpu).toBe(40);
     expect(s.memMb).toBe(500);
     expect(s.netRx).toBe(10);
+  });
+});
+
+describe("simple voice chat", () => {
+  const row = (port: number) => ({ core: "fabric", port }) as ServerRow;
+
+  it("rides the game UDP port and advertises the host port", () => {
+    expect(voiceChatUpdates(row(25565), "")).toEqual({ port: "25565", bind_address: "", voice_host: "" });
+    expect(voiceChatUpdates(row(25567), "").voice_host).toBe("25567");
+  });
+
+  it("keeps an owner-set host but fixes its port", () => {
+    expect(voiceChatUpdates(row(25570), "play.my.ru:24454").voice_host).toBe("play.my.ru:25570");
   });
 });

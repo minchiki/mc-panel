@@ -1,7 +1,8 @@
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { CORE_INFO, type Core } from "../cores/types.js";
 import { writeNoFollow } from "../lib/paths.js";
-import { readInside } from "../lib/safefs.js";
+import { mkdirInside, readInside, writeInside } from "../lib/safefs.js";
 import { applyUpdates, parseProperties, serializeProperties } from "../lib/properties.js";
 import { dataDirOf, type ServerRow } from "./repo.js";
 
@@ -89,6 +90,40 @@ export async function prepareFiles(server: ServerRow): Promise<void> {
     "broadcast-rcon-to-ops": "false",
   });
   await writeNoFollow(path, serializeProperties(next));
+  await prepareVoiceChat(server);
+}
+
+/**
+ * Simple Voice Chat listens on its own UDP port (24454 by default), which the
+ * container does not publish. Point it at the game port instead: that UDP port
+ * is already mapped host:server.port -> container:internalPort. The mod tells
+ * clients its listen port, so when the host port differs we advertise the real
+ * one through voice_host (keeping a host the owner set there).
+ */
+export function voiceChatUpdates(server: ServerRow, currentVoiceHost: string): Record<string, string> {
+  const inner = internalPort(server.core);
+  let voiceHost = "";
+  if (server.port !== inner) {
+    // A bare port makes clients reuse the address they joined with.
+    const custom = currentVoiceHost.trim().replace(/:?\d+$/, "");
+    voiceHost = custom ? `${custom}:${server.port}` : String(server.port);
+  }
+  return { port: String(inner), bind_address: "", voice_host: voiceHost };
+}
+
+async function prepareVoiceChat(server: ServerRow): Promise<void> {
+  const root = dataDirOf(server.id);
+  const addons = CORE_INFO[server.core].addons.dir;
+  const jars = await readdir(join(root, addons)).catch(() => [] as string[]);
+  if (!jars.some((f) => /voicechat/i.test(f) && f.endsWith(".jar"))) return;
+  // The folder is game-writable: created and written without following planted symlinks.
+  const dir = await mkdirInside(root, join(root, addons === "mods" ? "config" : "plugins", "voicechat")).catch(() => null);
+  if (!dir) return;
+  const path = join(dir, "voicechat-server.properties");
+  const lines = parseProperties(await readInside(root, path).then((b) => b.toString("utf8"), () => ""));
+  const entry = lines.find((l) => l.kind === "entry" && l.key === "voice_host");
+  const current = entry?.kind === "entry" ? entry.value : "";
+  await writeInside(root, path, serializeProperties(applyUpdates(lines, voiceChatUpdates(server, current))));
 }
 
 /** First-time defaults written once at creation (the user can change them later). */
