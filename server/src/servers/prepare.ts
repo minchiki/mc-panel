@@ -1,7 +1,7 @@
-import { lstat, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { CORE_INFO, type Core } from "../cores/types.js";
 import { writeNoFollow } from "../lib/paths.js";
+import { readInside } from "../lib/safefs.js";
 import { applyUpdates, parseProperties, serializeProperties } from "../lib/properties.js";
 import { dataDirOf, type ServerRow } from "./repo.js";
 
@@ -77,8 +77,7 @@ export async function prepareFiles(server: ServerRow): Promise<void> {
   if (!usesServerProperties(server.core)) return;
   await writeNoFollow(join(dir, "eula.txt"), "# Accepted by the server owner in MC Panel\neula=true\n");
   const path = join(dir, "server.properties");
-  const isLink = (await lstat(path).catch(() => null))?.isSymbolicLink();
-  const text = isLink ? "" : await readFile(path, "utf8").catch(() => "");
+  const text = await readInside(dir, path).then((b) => b.toString("utf8"), () => "");
   const lines = parseProperties(text);
   const port = String(internalPort(server.core));
   const next = applyUpdates(lines, {
@@ -96,5 +95,5 @@ export async function prepareFiles(server: ServerRow): Promise<void> {
 export async function writeInitialProperties(server: ServerRow, motd: string): Promise<void> {
   if (!usesServerProperties(server.core)) return;
   const lines = applyUpdates([], { motd, "max-players": "20", "online-mode": "true", difficulty: "normal" });
-  await writeFile(join(dataDirOf(server.id), "server.properties"), serializeProperties(lines));
+  await writeNoFollow(join(dataDirOf(server.id), "server.properties"), serializeProperties(lines));
 }

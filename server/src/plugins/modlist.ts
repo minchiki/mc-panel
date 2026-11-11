@@ -1,6 +1,6 @@
 import { TarArchive, ZipArchive } from "archiver";
-import { createWriteStream } from "node:fs";
-import { copyFile, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { config } from "../config.js";
@@ -8,8 +8,9 @@ import { one, run } from "../db/index.js";
 import { CORE_INFO } from "../cores/types.js";
 import { badRequest, conflict, errorMessage } from "../lib/errors.js";
 import { downloadFile, fetchJson } from "../lib/http.js";
+import { writeInside } from "../lib/safefs.js";
 import { invalidateDisk } from "../servers/disk.js";
-import type { ServerRow } from "../servers/repo.js";
+import { dataDirOf, type ServerRow } from "../servers/repo.js";
 import { runtime } from "../servers/runtime.js";
 import { addonsDir, safeJarName } from "./catalog.js";
 
@@ -210,7 +211,8 @@ async function buildInBackground(server: ServerRow, projectIds: string[], job: B
           await downloadFile(file.url, local, { checksum: file.hashes.sha512 ? { algorithm: "sha512", hex: file.hashes.sha512 } : undefined });
           const onServer = needsServer(project.server_side);
           const onClient = needsClient(project.client_side);
-          if (onServer) await copyFile(local, join(modsDir, name));
+          // Through a temp file + rename: a symlink planted at mods/<name> is replaced, not written through.
+          if (onServer) await writeInside(dataDirOf(server.id), join(modsDir, name), createReadStream(local));
           if (!onClient) await rm(local, { force: true });
           job.mods.push({ title: project.title, file: name, version: version.version_number, onServer, onClient, dependencyOf });
         }),

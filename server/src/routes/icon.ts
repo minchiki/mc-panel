@@ -10,6 +10,7 @@ import { parse } from "../lib/validate.js";
 import { dataDirOf } from "../servers/repo.js";
 import { runtime } from "../servers/runtime.js";
 import { auditServer, serverFor, type IdParams } from "./common.js";
+import { readInside } from "../lib/safefs.js";
 
 export const ICON_FILE = "server-icon.png";
 /** Minecraft only accepts a 64×64 PNG; the browser converts anything else before upload. */
@@ -20,7 +21,7 @@ export async function iconRoutes(app: FastifyInstance): Promise<void> {
   app.get<IdParams>("/api/servers/:id/icon", { preHandler: requireUser }, async (req, reply) => {
     const { server } = serverFor(req, "monitor");
     const path = await resolveExisting(dataDirOf(server.id), ICON_FILE);
-    const data = await readFile(path);
+    const data = await readInside(dataDirOf(server.id), path, MAX_ICON_BYTES);
     if (!pngSize(data)) throw badRequest("server-icon.png повреждён");
     reply.header("Content-Type", "image/png");
     reply.header("Cache-Control", "private, no-cache");

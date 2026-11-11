@@ -148,7 +148,7 @@ export async function removeCoreArtifacts(dataDir: string): Promise<void> {
 async function fetchTo(ctx: InstallContext, url: string, fileName: string, checksum?: Checksum): Promise<void> {
   ctx.log(`Скачиваю ${fileName} (${new URL(url).host})...`);
   const tmp = join(ctx.dataDir, `.${fileName}.download`);
-  const bytes = await downloadFile(url, tmp, { checksum });
+  const bytes = await downloadFile(url, tmp, { checksum, insideRoot: ctx.dataDir });
   await rename(tmp, join(ctx.dataDir, fileName));
   ctx.log(`Готово: ${fileName}, ${(bytes / 1024 / 1024).toFixed(1)} МБ${checksum ? `, ${checksum.algorithm} проверена` : ""}`);
 }

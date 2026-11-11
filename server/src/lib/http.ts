@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { createWriteStream } from "node:fs";
-import { rename, rm } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, realpath, rename, rm } from "node:fs/promises";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as WebReadableStream } from "node:stream/web";
+import { assertHandleInside } from "./safefs.js";
 
 const USER_AGENT = "mc-panel/0.1 (self-hosted Minecraft panel)";
 const DEFAULT_TIMEOUT_MS = 20_000;
@@ -105,11 +106,18 @@ export interface Checksum {
   hex: string;
 }
 
+export interface DownloadOptions {
+  checksum?: Checksum;
+  timeoutMs?: number;
+  /** Folder `dest` must stay inside (a server folder the game can plant symlinks in). The .part file is verified after opening. */
+  insideRoot?: string;
+}
+
 /**
  * Download to `dest` atomically (via a .part file), optionally verifying a
  * checksum published by the upstream API. Returns bytes written.
  */
-export function downloadFile(url: string, dest: string, opts: { checksum?: Checksum; timeoutMs?: number } = {}): Promise<number> {
+export function downloadFile(url: string, dest: string, opts: DownloadOptions = {}): Promise<number> {
   return withRetry(url, () => downloadOnce(url, dest, opts), DOWNLOAD_RETRY_DELAYS_MS);
 }
 
@@ -125,7 +133,7 @@ class StalledError extends Error {
   }
 }
 
-async function downloadOnce(url: string, dest: string, opts: { checksum?: Checksum; timeoutMs?: number }): Promise<number> {
+async function downloadOnce(url: string, dest: string, opts: DownloadOptions): Promise<number> {
   const part = `${dest}.part`;
   // Clean up before the response body starts flowing, so no chunk can be missed.
   await rm(part, { force: true });
@@ -155,7 +163,15 @@ async function downloadOnce(url: string, dest: string, opts: { checksum?: Checks
         cb(null, chunk);
       },
     });
-    await pipeline(Readable.fromWeb(res.body as unknown as WebReadableStream), meter, createWriteStream(part, { flags: "wx" }));
+    // O_EXCL refuses a symlink planted at the .part name; the fd check catches a swapped parent folder.
+    const fh = await open(part, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o644);
+    try {
+      if (opts.insideRoot) await assertHandleInside(fh, await realpath(opts.insideRoot));
+    } catch (err) {
+      await fh.close();
+      throw err;
+    }
+    await pipeline(Readable.fromWeb(res.body as unknown as WebReadableStream), meter, fh.createWriteStream());
     if (hash && opts.checksum && hash.digest("hex") !== opts.checksum.hex.toLowerCase()) {
       throw new Error(`Контрольная сумма ${new URL(url).pathname.split("/").pop()} не совпала, файл повреждён при скачивании`);
     }

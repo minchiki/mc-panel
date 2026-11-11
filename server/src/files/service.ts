@@ -1,12 +1,12 @@
 import { TarArchive, ZipArchive } from "archiver";
-import { createReadStream, createWriteStream } from "node:fs";
-import { lstat, mkdir, readdir, readFile, realpath, rename, rm, stat } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
-import { pipeline } from "node:stream/promises";
+import { once } from "node:events";
+import { lstat, readdir, realpath, rename, rm, stat, type FileHandle } from "node:fs/promises";
+import { basename, dirname, join, relative } from "node:path";
 import type { Readable } from "node:stream";
 import yauzl from "yauzl";
 import { badRequest, conflict, HttpError, notFound } from "../lib/errors.js";
-import { assertFileName, isWithin, resolveExisting, resolveInside, toRelative, writeNoFollow } from "../lib/paths.js";
+import { assertFileName, isWithin, resolveExisting, resolveInside, toRelative } from "../lib/paths.js";
+import { mkdirInside, openReadInside, writeInside } from "../lib/safefs.js";
 import { invalidateDisk, serverDiskBytes } from "../servers/disk.js";
 import { dataDirOf, getServer } from "../servers/repo.js";
 
@@ -29,7 +29,7 @@ async function resolveNew(serverId: string, userPath: string): Promise<string> {
   const [realRoot, realParent] = await Promise.all([realpath(root(serverId)), realpath(parent).catch(() => null)]);
   if (!realParent) throw notFound("Папка", "f");
   if (!isWithin(realRoot, realParent)) throw badRequest("Путь выходит за пределы папки сервера");
-  return target;
+  return join(realParent, basename(target));
 }
 
 /**
@@ -73,10 +73,16 @@ export async function listDir(serverId: string, userPath: string): Promise<FileE
 
 export async function readText(serverId: string, userPath: string): Promise<{ content: string; size: number }> {
   const file = await resolveExisting(root(serverId), userPath);
-  const st = await stat(file);
-  if (!st.isFile()) throw badRequest("Это не файл");
-  if (st.size > MAX_EDIT_BYTES) throw badRequest("Файл слишком большой для редактора (больше 5 МБ). Скачайте его.");
-  const buf = await readFile(file);
+  if (!(await stat(file)).isFile()) throw badRequest("Это не файл");
+  const fh = await openReadInside(root(serverId), file);
+  let st, buf: Buffer;
+  try {
+    st = await fh.stat();
+    if (st.size > MAX_EDIT_BYTES) throw badRequest("Файл слишком большой для редактора (больше 5 МБ). Скачайте его.");
+    buf = await fh.readFile();
+  } finally {
+    await fh.close();
+  }
   if (buf.subarray(0, 8000).includes(0)) throw badRequest("Это бинарный файл, его нельзя открыть в редакторе");
   return { content: buf.toString("utf8"), size: st.size };
 }
@@ -86,15 +92,15 @@ export async function writeText(serverId: string, userPath: string, content: str
   const target = (await exists(resolveInside(root(serverId), userPath)))
     ? await resolveExisting(root(serverId), userPath)
     : await resolveNew(serverId, userPath);
-  await assertQuota(serverId, Buffer.byteLength(content));
-  await writeNoFollow(target, content);
-  invalidateDisk(serverId);
+  await withQuota(serverId, async (budget) => {
+    await writeInside(root(serverId), target, content, { maxBytes: budget, tooBig: quotaError(serverId) });
+  });
 }
 
 export async function makeDir(serverId: string, userPath: string): Promise<void> {
   const target = await resolveNew(serverId, userPath);
   if (await exists(target)) throw conflict("Уже существует");
-  await mkdir(target);
+  await mkdirInside(root(serverId), target);
 }
 
 export async function renamePath(serverId: string, from: string, to: string): Promise<void> {
@@ -118,9 +124,10 @@ export async function deletePaths(serverId: string, paths: string[]): Promise<vo
 
 export async function openDownload(serverId: string, userPath: string): Promise<{ stream: Readable; size: number; name: string }> {
   const file = await resolveExisting(root(serverId), userPath);
-  const st = await stat(file);
-  if (!st.isFile()) throw badRequest("Скачать можно только файл (папку сначала заархивируйте)");
-  return { stream: createReadStream(file), size: st.size, name: file.split(/[\\/]/).pop() ?? "file" };
+  if (!(await stat(file)).isFile()) throw badRequest("Скачать можно только файл (папку сначала заархивируйте)");
+  const fh = await openReadInside(root(serverId), file);
+  const { size } = await fh.stat();
+  return { stream: fh.createReadStream(), size, name: file.split(/[\\/]/).pop() ?? "file" };
 }
 
 export async function saveUpload(serverId: string, dirPath: string, fileName: string, data: Readable): Promise<void> {
@@ -129,29 +136,36 @@ export async function saveUpload(serverId: string, dirPath: string, fileName: st
   if (!(await stat(dir)).isDirectory()) throw badRequest("Это не папка");
   const target = join(dir, fileName);
   if ((await lstat(target).catch(() => null))?.isSymbolicLink()) throw badRequest("Нельзя перезаписать ссылку");
-  await assertQuota(serverId, 0);
-  const part = `${target}.uploading`;
-  try {
-    await rm(part, { force: true });
-    await pipeline(data, createWriteStream(part, { flags: "wx" }));
-    await rename(part, target);
-  } catch (err) {
-    await rm(part, { force: true });
-    throw err;
-  }
-  invalidateDisk(serverId);
-  await assertQuota(serverId, 0).catch(async (err) => {
-    await rm(target, { force: true });
-    invalidateDisk(serverId);
-    throw err;
+  await withQuota(serverId, async (budget) => {
+    await writeInside(root(serverId), target, data, { maxBytes: budget, tooBig: quotaError(serverId) });
   });
 }
 
-async function assertQuota(serverId: string, extraBytes: number): Promise<void> {
-  const server = getServer(serverId);
-  const used = await serverDiskBytes(serverId, true);
-  if (used + extraBytes > server.disk_mb * 1024 * 1024) {
-    throw new HttpError(507, `Недостаточно места: лимит сервера ${server.disk_mb} МБ`);
+const quotaError = (serverId: string) => () => new HttpError(507, `Недостаточно места: лимит сервера ${getServer(serverId).disk_mb} МБ`);
+
+/**
+ * Runs a write with the bytes still free on the server. Writes to one server are
+ * queued, so parallel uploads cannot each spend the same remaining space.
+ */
+const quotaQueues = new Map<string, Promise<unknown>>();
+async function withQuota<T>(serverId: string, fn: (budgetBytes: number) => Promise<T>): Promise<T> {
+  const prev = quotaQueues.get(serverId) ?? Promise.resolve();
+  const run = prev
+    .catch(() => undefined)
+    .then(async () => {
+      const budget = getServer(serverId).disk_mb * 1024 * 1024 - (await serverDiskBytes(serverId, true));
+      if (budget <= 0) throw quotaError(serverId)();
+      try {
+        return await fn(budget);
+      } finally {
+        invalidateDisk(serverId);
+      }
+    });
+  quotaQueues.set(serverId, run);
+  try {
+    return await run;
+  } finally {
+    if (quotaQueues.get(serverId) === run) quotaQueues.delete(serverId);
   }
 }
 
@@ -171,25 +185,38 @@ export async function zipPaths(serverId: string, paths: string[], destName: stri
   const base = root(serverId);
   const first = paths[0];
   if (!first) throw badRequest("Не выбраны файлы");
-  const destDir = dirname(resolveInside(base, first));
+  const destDir = await resolveExisting(base, toRelative(base, dirname(resolveInside(base, first))));
   const dest = join(destDir, destName.endsWith(".zip") ? destName : `${destName}.zip`);
   if (await exists(dest)) throw conflict("Архив с таким именем уже есть");
-  await assertQuota(serverId, 0);
-  const archive = new ZipArchive({ zlib: { level: 6 } });
-  const out = createWriteStream(dest, { flags: "wx" });
-  const done = pipeline(archive, out);
-  for (const p of paths) {
-    const target = await resolveExisting(base, p);
-    const l = await lstat(target);
-    if (l.isDirectory()) {
-      for await (const file of walk(target)) archive.file(file, { name: relative(destDir, file).split("\\").join("/") });
-    } else if (l.isFile()) {
-      archive.file(target, { name: relative(destDir, target).split("\\").join("/") });
+  await withQuota(serverId, async (budget) => {
+    const archive = new ZipArchive({ zlib: { level: 6 } });
+    const done = writeInside(base, dest, archive, { maxBytes: budget, tooBig: quotaError(serverId) });
+    // Files are opened one at a time through a verified handle (no path re-resolution, no fd pile-up).
+    const add = async (file: string) => {
+      const fh = await openReadInside(base, file).catch(() => null);
+      if (!fh) return;
+      const entry = once(archive, "entry");
+      archive.append(fh.createReadStream(), { name: relative(destDir, file).split("\\").join("/") });
+      await entry;
+    };
+    try {
+      for (const p of paths) {
+        const target = await resolveExisting(base, p);
+        const l = await lstat(target);
+        if (l.isDirectory()) {
+          for await (const file of walk(target)) await add(file);
+        } else if (l.isFile()) {
+          await add(target);
+        }
+      }
+      await archive.finalize();
+    } catch (err) {
+      archive.abort();
+      await done.catch(() => undefined);
+      throw err;
     }
-  }
-  await archive.finalize();
-  await done;
-  invalidateDisk(serverId);
+    await done;
+  });
   return toRelative(base, dest);
 }
 
@@ -198,13 +225,25 @@ export async function unzip(serverId: string, zipPath: string, destDir?: string)
   const base = root(serverId);
   const zipFile = await resolveExisting(base, zipPath);
   const target = destDir !== undefined ? await resolveExisting(base, destDir) : dirname(zipFile);
-  const server = getServer(serverId);
-  const budget = server.disk_mb * 1024 * 1024 - (await serverDiskBytes(serverId, true));
+  return withQuota(serverId, (budget) => unzipInto(base, zipFile, target, budget));
+}
+
+async function unzipInto(base: string, zipFile: string, target: string, budget: number): Promise<number> {
+  // Read through a verified handle, so a swapped path cannot feed another server's archive in.
+  const fh = await openReadInside(base, zipFile);
+  try {
+    return await extract(fh, base, target, budget);
+  } finally {
+    await fh.close();
+  }
+}
+
+async function extract(fh: FileHandle, base: string, target: string, budget: number): Promise<number> {
   let written = 0;
   let count = 0;
 
   const zip = await new Promise<yauzl.ZipFile>((resolve, reject) =>
-    yauzl.open(zipFile, { lazyEntries: true, strictFileNames: true }, (err, z) => (err || !z ? reject(err ?? new Error("zip")) : resolve(z))),
+    yauzl.fromFd(fh.fd, { lazyEntries: true, strictFileNames: true, autoClose: false }, (err, z) => (err || !z ? reject(err ?? new Error("zip")) : resolve(z))),
   );
   await new Promise<void>((resolve, reject) => {
     // yauzl rejects absolute/".." entry names itself; surface that as a user error, not a 500.
@@ -215,17 +254,13 @@ export async function unzip(serverId: string, zipPath: string, destDir?: string)
         const out = resolveInside(target, entry.fileName);
         if (!isWithin(base, out)) throw badRequest(`Небезопасный путь в архиве: ${entry.fileName}`);
         if (entry.fileName.endsWith("/")) {
-          await mkdir(out, { recursive: true });
+          await mkdirInside(base, out);
           return;
         }
-        written += entry.uncompressedSize;
-        if (written > budget) throw new HttpError(507, "Распакованный архив не помещается в лимит диска сервера");
-        await mkdir(dirname(out), { recursive: true });
-        const realParent = await realpath(dirname(out));
-        if (!isWithin(await realpath(base), realParent)) throw badRequest("Путь выходит за пределы папки сервера");
-        if ((await lstat(out).catch(() => null))?.isSymbolicLink()) throw badRequest("Архив перезаписывает ссылку");
+        const tooBig = () => new HttpError(507, "Распакованный архив не помещается в лимит диска сервера");
+        if (written + entry.uncompressedSize > budget) throw tooBig();
         const stream = await new Promise<Readable>((res, rej) => zip.openReadStream(entry, (e, s) => (e || !s ? rej(e) : res(s))));
-        await pipeline(stream, createWriteStream(out));
+        written += await writeInside(base, out, stream, { maxBytes: budget - written, tooBig });
         count++;
       })()
         .then(() => zip.readEntry())
@@ -236,6 +271,5 @@ export async function unzip(serverId: string, zipPath: string, destDir?: string)
     });
     zip.readEntry();
   });
-  invalidateDisk(serverId);
   return count;
 }

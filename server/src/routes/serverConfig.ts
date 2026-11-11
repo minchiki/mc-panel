@@ -17,6 +17,7 @@ import { usesServerProperties } from "../servers/prepare.js";
 import { allocatePort, dataDirOf, updateServer } from "../servers/repo.js";
 import { runtime, sendCommand } from "../servers/runtime.js";
 import { auditServer, serverFor, serverView, type IdParams } from "./common.js";
+import { readInside } from "../lib/safefs.js";
 
 /** Keys the panel manages itself; editing them would break port mapping or RCON. */
 const MANAGED_KEYS = new Set(["server-port", "query.port", "enable-rcon", "rcon.port", "rcon.password", "broadcast-rcon-to-ops"]);
@@ -26,7 +27,7 @@ const IP = /^(\d{1,3}\.){3}\d{1,3}$/;
 async function readJsonList(serverId: string, file: string): Promise<unknown[]> {
   try {
     const path = await resolveExisting(dataDirOf(serverId), file);
-    const data = JSON.parse(await readFile(path, "utf8")) as unknown;
+    const data = JSON.parse((await readInside(dataDirOf(serverId), path)).toString("utf8")) as unknown;
     return Array.isArray(data) ? data : [];
   } catch {
     return [];
@@ -41,7 +42,7 @@ export async function serverConfigRoutes(app: FastifyInstance): Promise<void> {
     const { server } = serverFor(req, "settings");
     if (!usesServerProperties(server.core)) return { supported: false, values: {} };
     const text = await resolveExisting(dataDirOf(server.id), "server.properties")
-      .then((p) => readFile(p, "utf8"))
+      .then(async (p) => (await readInside(dataDirOf(server.id), p)).toString("utf8"))
       .catch(() => "");
     const values = toRecord(parseProperties(text));
     for (const k of MANAGED_KEYS) delete values[k];
@@ -60,7 +61,7 @@ export async function serverConfigRoutes(app: FastifyInstance): Promise<void> {
     }
     const path = join(dataDirOf(server.id), "server.properties");
     const text = await resolveExisting(dataDirOf(server.id), "server.properties")
-      .then((p) => readFile(p, "utf8"))
+      .then(async (p) => (await readInside(dataDirOf(server.id), p)).toString("utf8"))
       .catch(() => "");
     await writeNoFollow(path, serializeProperties(applyUpdates(parseProperties(text), updates)));
     auditServer(req, server.id, "server.properties", { keys: Object.keys(updates) });
