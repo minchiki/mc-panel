@@ -8,6 +8,7 @@ import { randomId, randomPassword } from "../lib/crypto.js";
 import { conflict, errorMessage } from "../lib/errors.js";
 import { dropServerDatabases } from "../databases/service.js";
 import { createBackup } from "../backups/service.js";
+import { saveSchedule } from "../schedules/service.js";
 import { rebuildPresetForNewVersion } from "../plugins/modlist.js";
 import { invalidateDisk } from "./disk.js";
 import { defaultJvmFlags, writeInitialProperties } from "./prepare.js";
@@ -52,10 +53,15 @@ export async function createServer(input: CreateServerInput): Promise<ServerRow>
   await mkdir(dataDirOf(id), { recursive: true });
   await mkdir(backupDirOf(id), { recursive: true });
   await writeInitialProperties(server, input.name);
+  // Worlds are what players lose for good; every new server gets a daily backup the owner can change or turn off.
+  saveSchedule(id, { name: "Ежедневный бэкап", cron: DEFAULT_BACKUP_CRON, action: "backup", payload: "", enabled: true });
   // Install in the background; progress streams to the console tab.
   void runtime(id).exclusive(() => runInstall(runtime(id)));
   return server;
 }
+
+/** 04:00 server time: before the off-site copy job (04:30) and while almost nobody plays. */
+export const DEFAULT_BACKUP_CRON = "0 4 * * *";
 
 async function runInstall(rt: Runtime): Promise<void> {
   const server = getServer(rt.id);
